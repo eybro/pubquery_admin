@@ -32,7 +32,7 @@ export default function Page() {
     try {
       // Example API request
       const response = await fetch(
-        "http://localhost:3000/api/users/change-password",
+        "https://sea-lion-app-d2vet.ondigitalocean.app/api/users/change-password",
         {
           method: "POST",
           headers: {

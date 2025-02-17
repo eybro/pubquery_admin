@@ -118,7 +118,7 @@ export default function Page() {
     async function fetchPubs() {
       try {
         const response = await fetch(
-          "http://localhost:3000/api/events/getUpcoming",
+          "https://sea-lion-app-d2vet.ondigitalocean.app/api/events/getUpcoming",
           {
             method: "GET",
             credentials: "include",
@@ -153,7 +153,7 @@ export default function Page() {
 
     setIsLoading(true);
     try {
-      const response = await fetch("http://localhost:3000/api/events/create", {
+      const response = await fetch("https://sea-lion-app-d2vet.ondigitalocean.app/api/events/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -185,7 +185,7 @@ export default function Page() {
   const deletePub = async (id: number) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/api/events/delete${id}`,
+        `https://sea-lion-app-d2vet.ondigitalocean.app/api/events/delete${id}`,
         {
           method: "DELETE",
           credentials: "include",
@@ -218,7 +218,7 @@ export default function Page() {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/api/events/update${editPub.id}`,
+        `https://sea-lion-app-d2vet.ondigitalocean.app/api/events/update${editPub.id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
