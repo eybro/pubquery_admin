@@ -71,7 +71,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Fetch user profile on mount
   React.useEffect(() => {
-    fetch("https://sea-lion-app-d2vet.ondigitalocean.app/api/users/profile", { credentials: "include" }) // Include credentials if using httpOnly cookies
+    fetch("https://api.pubquery.se/api/users/profile", { credentials: "include" }) // Include credentials if using httpOnly cookies
       .then((res) => res.json())
       .then((data) => setUser(data))
       .catch(() => setUser({ id: 0, username: "Guest" })); // Fallback if error
@@ -81,7 +81,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const handleLogout = async () => {
     setError(undefined);
     try {
-      const response = await fetch("https://sea-lion-app-d2vet.ondigitalocean.app/api/users/logout", {
+      const response = await fetch("https://api.pubquery.se/api/users/logout", {
         method: "POST",
         credentials: "include",
       });

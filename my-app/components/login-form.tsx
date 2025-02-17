@@ -29,7 +29,7 @@ export function LoginForm({
     setError("");
 
     try {
-      const response = await fetch("https://sea-lion-app-d2vet.ondigitalocean.app/api/users/login", {
+      const response = await fetch("https://api.pubquery.se/api/users/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

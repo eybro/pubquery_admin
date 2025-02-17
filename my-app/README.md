@@ -14,7 +14,7 @@ pnpm dev
 bun dev
 ```
 
-Open [https://sea-lion-app-d2vet.ondigitalocean.app](https://sea-lion-app-d2vet.ondigitalocean.app) with your browser to see the result.
+Open [https://api.pubquery.se](https://api.pubquery.se) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
