@@ -1,23 +1,11 @@
-"use client"
+"use client";
+import { useState } from "react";
+import * as React from "react";
+import { Settings2, Beer, User } from "lucide-react";
 
-import * as React from "react"
-import {
-  BookOpen,
-  Bot,
-  Command,
-  Frame,
-  LifeBuoy,
-  Map,
-  PieChart,
-  Send,
-  Settings2,
-  SquareTerminal,
-} from "lucide-react"
-
-import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
-import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
+import { LogOut } from "lucide-react"; // Import the LogOut icon from lucide
+import { Button } from "@/components/ui/button"; // ShadCN UI Button component
+import { NavMain } from "@/components/nav-main";
 import {
   Sidebar,
   SidebarContent,
@@ -26,7 +14,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
+import { useRouter } from "next/navigation"; // For redirecting after logout
 
 const data = {
   user: {
@@ -36,123 +25,78 @@ const data = {
   },
   navMain: [
     {
-      title: "Playground",
-      url: "#",
-      icon: SquareTerminal,
+      title: "Pubs",
+      url: "/dashboard",
+      icon: Beer,
       isActive: true,
       items: [
         {
-          title: "History",
-          url: "#",
+          title: "Upcoming Pubs",
+          url: "/dashboard",
         },
         {
-          title: "Starred",
-          url: "#",
+          title: "Past Pubs",
+          url: "/dashboard/history",
         },
         {
-          title: "Settings",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Models",
-      url: "#",
-      icon: Bot,
-      items: [
-        {
-          title: "Genesis",
-          url: "#",
-        },
-        {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Documentation",
-      url: "#",
-      icon: BookOpen,
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
+          title: "Menu",
+          url: "/dashboard/menu",
         },
       ],
     },
     {
       title: "Settings",
-      url: "#",
+      url: "/settings/reset-password",
       icon: Settings2,
       items: [
         {
-          title: "General",
-          url: "#",
-        },
-        {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
+          title: "Reset Password",
+          url: "/settings/reset-password",
         },
       ],
     },
   ],
-  navSecondary: [
-    {
-      title: "Support",
-      url: "#",
-      icon: LifeBuoy,
-    },
-    {
-      title: "Feedback",
-      url: "#",
-      icon: Send,
-    },
-  ],
-  projects: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
-    },
-  ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const [user, setUser] = React.useState<
+    | {
+        id: number;
+        username: string;
+      }
+    | undefined
+  >();
+  const router = useRouter();
+  const [error, setError] = useState<string | undefined>();
+
+  // Fetch user profile on mount
+  React.useEffect(() => {
+    fetch("http://localhost:3000/api/users/profile", { credentials: "include" }) // Include credentials if using httpOnly cookies
+      .then((res) => res.json())
+      .then((data) => setUser(data))
+      .catch(() => setUser({ id: 0, username: "Guest" })); // Fallback if error
+  }, []);
+
+  // Handle logout
+  const handleLogout = async () => {
+    setError(undefined);
+    try {
+      const response = await fetch("http://localhost:3000/api/users/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to log out. Please try again.");
+      }
+
+      // Redirect to login page after logging out
+      router.push("/login");
+    } catch {
+      setError("Failed to log out. Please try again.");
+    }
+  };
+
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
@@ -161,11 +105,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton size="lg" asChild>
               <a href="#">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <Command className="size-4" />
+                  <User className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Acme Inc</span>
-                  <span className="truncate text-xs">Enterprise</span>
+                  <span className="truncate font-semibold">
+                    {user ? user.username : "Loading..."}
+                  </span>
+                  <span className="truncate text-xs">Admin</span>
                 </div>
               </a>
             </SidebarMenuButton>
@@ -174,12 +120,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        {error && <p style={{ color: "red" }}>{error}</p>}
+        <div className="flex items-center space-x-4 p-4">
+          <Button className="w-full" onClick={handleLogout}>
+            <LogOut className="mr-2" />{" "}
+            {/* Manually add the icon to the left of the text */}
+            Sign out
+          </Button>
+        </div>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

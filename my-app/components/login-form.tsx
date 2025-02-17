@@ -1,5 +1,5 @@
 "use client";
-
+import React from "react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie";
+
 
 export function LoginForm({
   className,
@@ -40,10 +40,13 @@ export function LoginForm({
         throw new Error("Invalid credentials");
       }
 
-      
       router.push("/dashboard"); // Redirect to dashboard or any protected page
-    } catch (err: any) {
-      setError(err.message);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("An error occurred. Please try again.");
+      }
     }
   };
 
@@ -88,7 +91,7 @@ export function LoginForm({
                   required
                 />
               </div>
-              {error && <p className="text-red-500 text-sm">{error}</p>}
+              {error && <p className="text-sm text-red-500">{error}</p>}
               <Button type="submit" className="w-full">
                 Login
               </Button>
