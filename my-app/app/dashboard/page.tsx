@@ -61,13 +61,10 @@ export default function Page() {
   };
 
   const formatDate = (isoString: string) => {
+    console.log(isoString);
     const date = new Date(isoString);
     const now = new Date();
-
     console.log(date);
-    const stockholmDate = toZonedTime(date, "Europe/Stockholm");
-    console.log(stockholmDate);
-
 
     const options: Intl.DateTimeFormatOptions = {
       weekday: "long",
@@ -82,10 +79,7 @@ export default function Page() {
       date,
     );
 
-    const formattedDate2 = new Intl.DateTimeFormat("en-GB", options).format(
-      stockholmDate,
-    );
-    console.log(formattedDate2);
+
     const [weekday, day, month, time] = formattedDate.split(" ");
 
     // If it's today
