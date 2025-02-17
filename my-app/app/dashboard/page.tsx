@@ -64,7 +64,9 @@ export default function Page() {
     const date = new Date(isoString);
     const now = new Date();
 
-    const zonedDate = toZonedTime(date, "Europe/Stockholm");
+    console.log(date);
+    const stockholmDate = toZonedTime(date, "Europe/Stockholm");
+    console.log(stockholmDate);
 
 
     const options: Intl.DateTimeFormatOptions = {
@@ -77,17 +79,22 @@ export default function Page() {
     };
 
     const formattedDate = new Intl.DateTimeFormat("en-GB", options).format(
-      zonedDate,
+      date,
     );
+
+    const formattedDate2 = new Intl.DateTimeFormat("en-GB", options).format(
+      stockholmDate,
+    );
+    console.log(formattedDate2);
     const [weekday, day, month, time] = formattedDate.split(" ");
 
     // If it's today
-    if (zonedDate.toDateString() === now.toDateString()) {
+    if (date.toDateString() === now.toDateString()) {
       return `Today at ${time}`;
     }
 
     // if it's this week
-    if (zonedDate > now && zonedDate < add(now, { days: 7 - now.getDay() })) {
+    if (date > now && date < add(now, { days: 7 - now.getDay() })) {
       return `${weekday} at ${time}`;
     }
 
