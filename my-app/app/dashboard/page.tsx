@@ -73,6 +73,7 @@ export default function Page() {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
+      timeZone: "UTC",
     };
 
     const formattedDate = new Intl.DateTimeFormat("en-GB", options).format(
@@ -83,7 +84,7 @@ export default function Page() {
     const [weekday, day, month, time] = formattedDate.split(" ");
 
     // If it's today
-    if (date.toDateString() === now.toDateString()) {
+    if (date.toUTCString().slice(0, 16) === now.toUTCString().slice(0, 16)) {
       return `Today at ${time}`;
     }
 
