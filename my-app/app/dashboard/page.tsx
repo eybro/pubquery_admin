@@ -61,10 +61,8 @@ export default function Page() {
   };
 
   const formatDate = (isoString: string) => {
-    console.log(isoString);
     const date = new Date(isoString);
     const now = new Date();
-    console.log(date);
 
     const options: Intl.DateTimeFormatOptions = {
       weekday: "long",
