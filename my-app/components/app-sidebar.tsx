@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import * as React from "react";
-import { Settings2, Beer, User } from "lucide-react";
+import { Settings2, Beer, User, PartyPopper } from "lucide-react";
 
 import { LogOut } from "lucide-react"; // Import the LogOut icon from lucide
 import { Button } from "@/components/ui/button"; // ShadCN UI Button component
@@ -22,6 +22,7 @@ const data = {
     name: "shadcn",
     email: "m@example.com",
     avatar: "/avatars/shadcn.jpg",
+    organizationName: "ShadCN",
   },
   navMain: [
     {
@@ -45,6 +46,17 @@ const data = {
       ],
     },
     {
+      title: "Dinners",
+      url: "/dinners",
+      icon: PartyPopper,
+      items: [
+        {
+          title: "Upcoming Dinners",
+          url: "/dinners",
+        },
+      ],
+    },
+    {
       title: "Settings",
       url: "/settings/reset-password",
       icon: Settings2,
@@ -61,6 +73,7 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [user, setUser] = React.useState<
     | {
+        organizationName: string;
         id: number;
         username: string;
       }
@@ -71,17 +84,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Fetch user profile on mount
   React.useEffect(() => {
-    fetch("https://api.pubquery.se/api/users/profile", { credentials: "include" }) // Include credentials if using httpOnly cookies
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`, { credentials: "include" }) // Include credentials if using httpOnly cookies
       .then((res) => res.json())
       .then((data) => setUser(data))
-      .catch(() => setUser({ id: 0, username: "Guest" })); // Fallback if error
+      .catch(() => setUser({ id: 0, username: "Guest", organizationName: "Demo" })); // Fallback if error
   }, []);
+
+  console.log(user);
 
   // Handle logout
   const handleLogout = async () => {
     setError(undefined);
     try {
-      const response = await fetch("https://api.pubquery.se/api/users/logout", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/logout`, {
         method: "POST",
         credentials: "include",
       });
@@ -108,10 +123,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <User className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">
-                    {user ? user.username : "Loading..."}
+                  <span className="font-semibold truncate">
+                    {user ? user.organizationName : ""}
                   </span>
-                  <span className="truncate text-xs">Admin</span>
+                  <span className="truncate text-xs">{ user ? user.username: ""}</span>
                 </div>
               </a>
             </SidebarMenuButton>

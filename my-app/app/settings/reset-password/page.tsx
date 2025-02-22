@@ -30,9 +30,8 @@ export default function Page() {
     setSuccessMessage(undefined);
 
     try {
-      // Example API request
       const response = await fetch(
-        "https://api.pubquery.se/api/users/change-password",
+        `${process.env.NEXT_PUBLIC_API_URL}/api/users/change-password`,
         {
           method: "POST",
           headers: {

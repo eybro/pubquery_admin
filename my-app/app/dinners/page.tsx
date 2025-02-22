@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CalendarIcon, PlusIcon } from "lucide-react";
 import { toZonedTime } from "date-fns-tz";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -46,7 +48,20 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(false);
   const [pubName, setPubName] = useState("");
   const [date, setDate] = React.useState<Date>();
+  const [eventLink, setEventLink] = useState("");
+
+const [eventTitle, setEventTitle] = useState("");
+const [description, setDescription] = useState("");
+const [signupLink, setSignupLink] = useState("");
+const [location, setLocation] = useState("");
+const [allowedGuests, setAllowedGuests] = useState("");
+const [priceWithoutAlcohol, setPriceWithoutAlcohol] = useState("");
+const [priceWithAlcohol, setPriceWithAlcohol] = useState("");
+
+
   const [message, setMessage] = useState<{
+
+  
     text: string;
     type: "success" | "error";
   }>();
@@ -147,7 +162,7 @@ export default function Page() {
   }, []);
 
   // Add Pub Handler
-  const addPub = async () => {
+  const addDinner = async () => {
     if (!pubName || !date) {
       showMessage("Please provide both name and date.", "error");
       return;
@@ -159,11 +174,21 @@ export default function Page() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/create`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dinners/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ title: pubName, date: formattedDate }),
+        body: JSON.stringify({ 
+        title: eventTitle, 
+        date: formattedDate,
+        description : description,
+        signup_link : signupLink,
+        eventLink : eventLink,
+        location : location,
+        allowed_guests : allowedGuests,
+        price_without_alcohol : priceWithoutAlcohol,
+        price_with_alcohol : priceWithAlcohol,
+       }),
       });
 
       if (!response.ok) {
@@ -270,7 +295,7 @@ export default function Page() {
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
-            <h1 className="text-xl font-semibold">Add & Edit Pubs</h1>
+            <h1 className="text-xl font-semibold">Add & Edit Dinners</h1>
           </div>
         </header>
         {isLoading && (
@@ -281,51 +306,117 @@ export default function Page() {
 
         <div className="p-4">
           {/* Add Pub Row */}
-          <div className="mb-4 flex w-full max-w-[1200px] items-center gap-4 rounded-lg border bg-secondary p-4 shadow-sm">
-            {/* Date Picker */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-[30%] justify-start truncate text-left font-normal",
-                    !date && "text-muted-foreground",
-                  )}
-                >
-                  <CalendarIcon className="mr-2 size-4" />
-                  {date ? (
-                    format(date, "PPP HH:mm:ss")
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={(d) => handleSelect(d)}
-                  initialFocus
-                />
-                <div className="border-t border-border p-3">
-                  <TimePickerDemo setDate={setDate} date={date} />
-                </div>
-              </PopoverContent>
-            </Popover>
+          <div className="mb-4 flex w-full max-w-[1200px] flex-wrap gap-4 rounded-lg border bg-secondary p-4 shadow-sm">
+    
+    {/* Date Picker */}
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn(
+            "w-full sm:w-[30%] justify-start truncate text-left font-normal",
+            !date && "text-muted-foreground",
+          )}
+        >
+          <CalendarIcon className="mr-2 size-4" />
+          {date ? format(date, "PPP HH:mm:ss") : <span>Pick a date</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={(d) => handleSelect(d)}
+          initialFocus
+        />
+        <div className="border-t border-border p-3">
+          <TimePickerDemo setDate={setDate} date={date} />
+        </div>
+      </PopoverContent>
+    </Popover>
 
-            {/* Pub Name Input */}
-            <Input
-              placeholder="Enter pub name..."
-              value={pubName}
-              onChange={(e) => setPubName(e.target.value)}
-              className="flex-1 bg-white text-center font-semibold"
-            />
+    {/* Title Input */}
+    <Input
+      placeholder="Enter event title..."
+      value={eventTitle}
+      onChange={(e) => setEventTitle(e.target.value)}
+      className="flex-1 bg-white text-center font-semibold"
+    />
 
-            {/* Plus Button */}
-            <Button variant="default" onClick={addPub}>
-              <PlusIcon className="size-5" />
-            </Button>
-          </div>
+    {/* Description Input */}
+    <Textarea
+      placeholder="Enter description (max 2000 characters)..."
+      value={description}
+      onChange={(e) => setDescription(e.target.value.slice(0, 2000))}
+      className="w-full bg-white"
+      rows={4}
+    />
+
+    {/* Signup Link Input */}
+    <Input
+      placeholder="Enter signup link..."
+      value={signupLink}
+      onChange={(e) => setSignupLink(e.target.value)}
+      className="w-full bg-white"
+    />
+
+    {/* Event Link */}
+    <Input
+      placeholder="Enter event link..."
+      value={eventLink}
+      onChange={(e) => setEventLink(e.target.value)}
+      className="w-full bg-white"
+    />
+
+    {/* Location Input */}
+    <Input
+      placeholder="Enter location..."
+      value={location}
+      onChange={(e) => setLocation(e.target.value)}
+      className="w-full sm:w-[48%] bg-white"
+    />
+
+    {/* Allowed Guests Dropdown */}
+    <Select value={allowedGuests} onValueChange={setAllowedGuests}>
+      <SelectTrigger className="w-full sm:w-[48%] bg-white">
+        <SelectValue placeholder="Select allowed guests" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all_students">All Students</SelectItem>
+        <SelectItem value="members">Chapter Members Only</SelectItem>
+        <SelectItem value="members_plus_one">Chapter Members + 1 Guest</SelectItem>
+        <SelectItem value="kmr">KMR Members</SelectItem>
+        <SelectItem value="everyone">Everyone</SelectItem>
+      </SelectContent>
+    </Select>
+
+    {/* Price w/o Alcohol */}
+    <Input
+      placeholder="Price w/o alcohol..."
+      type="number"
+      min="0"
+      value={priceWithoutAlcohol}
+      onChange={(e) => setPriceWithoutAlcohol(e.target.value)}
+      className="w-full sm:w-[48%] bg-white"
+    />
+
+    {/* Price with Alcohol */}
+    <Input
+      placeholder="Price with alcohol..."
+      type="number"
+      min="0"
+      value={priceWithAlcohol}
+      onChange={(e) => setPriceWithAlcohol(e.target.value)}
+      className="w-full sm:w-[48%] bg-white"
+    />
+
+    {/* Submit Button */}
+    <Button variant="default" onClick={addDinner} className="w-full">
+      <PlusIcon className="size-5 mr-2" />
+      Add Event
+    </Button>
+  </div>
+
 
           {/* List of Pubs */}
           <div className="mt-4 w-full max-w-[1200px] space-y-2">
