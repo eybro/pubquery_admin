@@ -84,20 +84,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Fetch user profile on mount
   React.useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`, { credentials: "include" }) // Include credentials if using httpOnly cookies
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`, {
+      credentials: "include",
+    }) // Include credentials if using httpOnly cookies
       .then((res) => res.json())
       .then((data) => setUser(data))
-      .catch(() => setUser({ id: 0, username: "Guest", organizationName: "Demo" })); // Fallback if error
+      .catch(() =>
+        setUser({ id: 0, username: "Guest", organizationName: "Demo" }),
+      ); // Fallback if error
   }, []);
 
   // Handle logout
   const handleLogout = async () => {
     setError(undefined);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/users/logout`,
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      );
 
       if (!response.ok) {
         throw new Error("Failed to log out. Please try again.");
@@ -121,10 +128,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <User className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="font-semibold truncate">
+                  <span className="truncate font-semibold">
                     {user ? user.organizationName : ""}
                   </span>
-                  <span className="truncate text-xs">{ user ? user.username: ""}</span>
+                  <span className="truncate text-xs">
+                    {user ? user.username : ""}
+                  </span>
                 </div>
               </a>
             </SidebarMenuButton>

@@ -31,8 +31,6 @@ import React from "react";
 import { add, format } from "date-fns";
 import { TimePickerDemo } from "@/components/time-picker-demo";
 
-
-
 type Pub = {
   id: number;
   title: string;
@@ -80,7 +78,6 @@ export default function Page() {
     const formattedDate = new Intl.DateTimeFormat("en-GB", options).format(
       date,
     );
-
 
     const [weekday, day, month, time] = formattedDate.split(" ");
 
@@ -159,12 +156,15 @@ export default function Page() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/create`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ title: pubName, date: formattedDate }),
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/events/create`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ title: pubName, date: formattedDate }),
+        },
+      );
 
       if (!response.ok) {
         throw new Error(

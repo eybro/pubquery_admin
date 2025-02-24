@@ -8,14 +8,13 @@ import { Label } from "@/components/ui/label";
 import { CalendarIcon, PlusIcon } from "lucide-react";
 import { toZonedTime } from "date-fns-tz";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import {
   SidebarProvider,
   SidebarInset,
@@ -33,9 +32,22 @@ import { cn } from "@/lib/utils";
 import React from "react";
 import { add, format } from "date-fns";
 import { TimePickerDemo } from "@/components/time-picker-demo";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
- function DateTimePicker({ date, setDate,  disabled, }: { date: Date | undefined; setDate: (date: Date | undefined) => void;  disabled?: boolean; }) {
+function DateTimePicker({
+  date,
+  setDate,
+  disabled,
+}: {
+  date: Date | undefined;
+  setDate: (date: Date | undefined) => void;
+  disabled?: boolean;
+}) {
   const handleSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) setDate(selectedDate);
   };
@@ -48,7 +60,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
           variant="outline"
           className={cn(
             "w-full justify-start truncate text-left font-normal",
-            !date && "text-muted-foreground"
+            !date && "text-muted-foreground",
           )}
         >
           <CalendarIcon className="mr-2 size-4" />
@@ -70,7 +82,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
   );
 }
 
-
 type Dinner = {
   id: number;
   title: string;
@@ -82,54 +93,49 @@ type Dinner = {
   allowed_guests: string;
   price_without_alcohol: number;
   price_with_alcohol: number;
-}
-
-interface DinnerListProps {
-  dinners: Dinner[];
-  deleteDinner: (id: number) => void;
-  updateDinner: (dinner: Dinner) => void; // Callback for saving changes
-  formatDate: (date: string) => string;
-}
-
-interface DatePickerProps {
-  date: Date | null;
-  setDate: (date: Date | null) => void;
-  editable: boolean;
-}
-
-
+};
 
 function DinnerAccordionItem({
   dinner,
   deleteDinner,
   updateDinner,
   formatDate,
+  showMessage,
 }: {
   dinner: Dinner;
   deleteDinner: (id: number) => void;
   updateDinner: (dinner: Dinner) => void;
   formatDate: (date: string) => string;
+  showMessage: (text: string, type: "success" | "error") => void;
 }) {
   const [editable, setEditable] = useState(false);
   const [editedDinner, setEditedDinner] = useState<Dinner>(dinner);
-  const [allowedGuests, setAllowedGuests] = useState("");
-  const [date, setDate] = React.useState<Date>();
+  const [setDate] = React.useState<Date>();
 
   const handleChange = (field: keyof Dinner, value: string | number) => {
+    if (field === "date") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (new Date(value) < today) {
+        showMessage("You cannot select a past date", "error");
+        return;
+      }
+    }
+
     setEditedDinner((prev) => ({ ...prev, [field]: value }));
   };
-
 
   const handleSave = () => {
     updateDinner(editedDinner);
     setEditable(false);
   };
 
-
-
   return (
-    <AccordionItem value={`dinner-${dinner.id}`} className="rounded-lg border bg-muted/50">
-      <div className="flex flex-col sm:flex-row items-center justify-between p-4">
+    <AccordionItem
+      value={`dinner-${dinner.id}`}
+      className="rounded-lg border bg-muted/50"
+    >
+      <div className="flex flex-col items-center justify-between p-4 sm:flex-row">
         {/* Date */}
         <div className="rounded-lg border border-gray-300 bg-gray-200 px-3 py-1 text-lg font-medium text-primary shadow-sm">
           {formatDate(dinner.date)}
@@ -147,7 +153,11 @@ function DinnerAccordionItem({
               <Save className="size-4" />
             </Button>
           ) : (
-            <Button size="icon" variant="outline" onClick={() => setEditable(true)}>
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={() => setEditable(true)}
+            >
               <Pencil className="size-4" />
             </Button>
           )}
@@ -155,7 +165,11 @@ function DinnerAccordionItem({
             size="icon"
             variant="destructive"
             onClick={() => {
-              if (confirm("Are you sure you want to delete this dinner? This action cannot be undone.")) {
+              if (
+                confirm(
+                  "Are you sure you want to delete this dinner? This action cannot be undone.",
+                )
+              ) {
                 deleteDinner(dinner.id);
               }
             }}
@@ -171,22 +185,20 @@ function DinnerAccordionItem({
       </AccordionTrigger>
 
       {/* Dinner Details */}
-       {/* Date Display or Picker */}
+      {/* Date Display or Picker */}
       <AccordionContent className="grid grid-cols-1 gap-4 border-t px-4 py-3 sm:grid-cols-2">
-
-           {/* Date Display or Picker */}
+        {/* Date Display or Picker */}
         <div className="flex flex-col gap-1">
-        <Label htmlFor={`title-${dinner.id}`}>Date</Label>
-        <DateTimePicker
-    date={editedDinner.date ? new Date(editedDinner.date) : undefined}
-    setDate={(selectedDate) => {
-      setDate(selectedDate);
-      handleChange("date", selectedDate ? selectedDate.toISOString() : "");
-    }}
-    disabled={!editable}
-  />
+          <Label htmlFor={`title-${dinner.id}`}>Date</Label>
+          <DateTimePicker
+            date={editedDinner.date ? new Date(editedDinner.date) : undefined}
+            setDate={(selectedDate) => {
+              setDate(selectedDate);
+              handleChange("date", selectedDate?.toISOString() || "");
+            }}
+            disabled={!editable}
+          />
         </div>
-
 
         <div className="flex flex-col gap-1">
           <Label htmlFor={`title-${dinner.id}`}>Title</Label>
@@ -223,34 +235,43 @@ function DinnerAccordionItem({
             <SelectContent>
               <SelectItem value="all_students">All Students</SelectItem>
               <SelectItem value="members">Chapter Members Only</SelectItem>
-              <SelectItem value="members_plus_one">Chapter Members + 1 Guest</SelectItem>
+              <SelectItem value="members_plus_one">
+                Chapter Members + 1 Guest
+              </SelectItem>
               <SelectItem value="kmr">KMR Members</SelectItem>
               <SelectItem value="everyone">Everyone</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-
         <div className="flex flex-col gap-1">
-          <Label htmlFor={`price-without-alcohol-${dinner.id}`}>Price (without alcohol)</Label>
+          <Label htmlFor={`price-without-alcohol-${dinner.id}`}>
+            Price (without alcohol)
+          </Label>
           <Input
             id={`price-without-alcohol-${dinner.id}`}
             type="number"
             value={editedDinner.price_without_alcohol}
             disabled={!editable}
-            onChange={(e) => handleChange("price_without_alcohol", Number(e.target.value))}
+            onChange={(e) =>
+              handleChange("price_without_alcohol", Number(e.target.value))
+            }
             className="bg-white"
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <Label htmlFor={`price-with-alcohol-${dinner.id}`}>Price (with alcohol)</Label>
+          <Label htmlFor={`price-with-alcohol-${dinner.id}`}>
+            Price (with alcohol)
+          </Label>
           <Input
             id={`price-with-alcohol-${dinner.id}`}
             type="number"
             value={editedDinner.price_with_alcohol}
             disabled={!editable}
-            onChange={(e) => handleChange("price_with_alcohol", Number(e.target.value))}
+            onChange={(e) =>
+              handleChange("price_with_alcohol", Number(e.target.value))
+            }
             className="bg-white"
           />
         </div>
@@ -287,21 +308,16 @@ function DinnerAccordionItem({
             className="bg-white"
           />
         </div>
-
-       
       </AccordionContent>
     </AccordionItem>
   );
 }
 
-
-
 export default function Page() {
   const [dinners, setDinners] = useState<Dinner[]>([]);
-  const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [date, setDate] = React.useState<Date>();
-  const [eventLink, setEventLink] = useState("");
+  const [event_link, setEventLink] = useState("");
 
   const [eventTitle, setEventTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -311,18 +327,15 @@ export default function Page() {
   const [priceWithoutAlcohol, setPriceWithoutAlcohol] = useState("");
   const [priceWithAlcohol, setPriceWithAlcohol] = useState("");
 
-
   const [message, setMessage] = useState<{
     text: string;
     type: "success" | "error";
   }>();
-  const [editPub, setEditPub] = useState<Pub | undefined>(); // Store selected pub for editing
 
   const showMessage = (text: string, type: "success" | "error") => {
     setMessage({ text, type });
     setTimeout(() => setMessage(undefined), 3000);
   };
-
 
   const formatDate = (isoString: string) => {
     const date = new Date(isoString);
@@ -376,6 +389,7 @@ export default function Page() {
     const diff = newDay.getTime() - date.getTime();
     const diffInDays = diff / (1000 * 60 * 60 * 24);
     const newDateFull = add(date, { days: Math.ceil(diffInDays) });
+
     setDate(newDateFull);
   };
 
@@ -413,32 +427,36 @@ export default function Page() {
       return;
     }
 
-    // Convert to local time, adjust to UTC if needed
-    const localDate = toZonedTime(date, "Europe/Stockholm"); // Replace 'Europe/Stockholm' with your time zone
+    const localDate = toZonedTime(date, "Europe/Stockholm"); 
     const formattedDate = format(localDate, "yyyy-MM-dd'T'HH:mm:ssXXX");
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dinners/create`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ 
-        title: eventTitle, 
-        date: formattedDate,
-        description : description,
-        signup_link : signupLink,
-        eventLink : eventLink,
-        location : location,
-        allowed_guests : allowedGuests,
-        price_without_alcohol : priceWithoutAlcohol,
-        price_with_alcohol : priceWithAlcohol,
-       }),
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/dinners/create`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            title: eventTitle,
+            date: formattedDate,
+            description: description,
+            signup_link: signupLink,
+            event_link: event_link,
+            location: location,
+            allowed_guests: allowedGuests,
+            price_without_alcohol: priceWithoutAlcohol,
+            price_with_alcohol: priceWithAlcohol,
+          }),
+        },
+      );
 
       if (!response.ok) {
         throw new Error(
-          response.status === 409 ? "Dinner already exists" : "Failed to add Dinner",
+          response.status === 409
+            ? "Dinner already exists"
+            : "Failed to add Dinner",
         );
       }
 
@@ -468,7 +486,7 @@ export default function Page() {
 
       if (!response.ok) throw new Error("Failed to delete dinner");
 
-      setDinners(dinners.filter((dinner) => dinner.id !== id)); // Remove from UI
+      setDinners(dinners.filter((dinner) => dinner.id !== id)); 
       showMessage("Dinner deleted successfully!", "success");
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -479,34 +497,35 @@ export default function Page() {
     }
   };
 
-  const updateDinner = async () => {
+  const updateDinner = async (dinner: Dinner) => {
+    const localDate = toZonedTime(dinner.date, "Europe/Stockholm"); 
+    const formattedDate = format(localDate, "yyyy-MM-dd'T'HH:mm:ssXXX");
 
-
-   
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/dinners/update${editPub.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/dinners/update${dinner.id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({
-            id: editPub.id,
-            title: editPub.title,
-            date : editPub.date,
-            description: editPub.description,
-            signup_link: editPub.signup_link,
-            event_link: editPub.event_link,
-            location: editPub.location,
-            allowed_guests: editPub.allowed_guests,
-            price_without_alcohol: editPub.price_without_alcohol,
-            price_with_alcohol: editPub.price_with_alcohol,
+            id: dinner.id,
+            title: dinner.title,
+            date: formattedDate,
+            description: dinner.description,
+            signup_link: dinner.signup_link,
+            event_link: dinner.event_link,
+            location: dinner.location,
+            allowed_guests: dinner.allowed_guests,
+            price_without_alcohol: dinner.price_without_alcohol,
+            price_with_alcohol: dinner.price_with_alcohol,
           }),
         },
       );
 
       if (!response.ok) throw new Error("Failed to update Dinner");
 
+      showMessage("Dinner updated successfully!", "success");
     } catch (error: unknown) {
       if (error instanceof Error) {
         setMessage({ text: error.message, type: "error" });
@@ -515,9 +534,6 @@ export default function Page() {
       }
     }
   };
-
-
-  
 
   return (
     <SidebarProvider>
@@ -547,140 +563,143 @@ export default function Page() {
 
         <div className="p-4">
           <div className="mb-4 flex w-full max-w-[1200px] flex-wrap gap-4 rounded-lg border bg-secondary p-4 shadow-sm">
-    
-    {/* Date Picker */}
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          className={cn(
-            "w-full sm:w-[30%] justify-start truncate text-left font-normal",
-            !date && "text-muted-foreground",
-          )}
-        >
-          <CalendarIcon className="mr-2 size-4" />
-          {date ? format(date, "PPP HH:mm:ss") : <span>Pick a date</span>}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
-        <Calendar
-          mode="single"
-          selected={date}
-          onSelect={(d) => handleSelect(d)}
-          initialFocus
-        />
-        <div className="border-t border-border p-3">
-          <TimePickerDemo setDate={setDate} date={date} />
-        </div>
-      </PopoverContent>
-    </Popover>
+            {/* Date Picker */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start truncate text-left font-normal sm:w-[30%]",
+                    !date && "text-muted-foreground",
+                  )}
+                >
+                  <CalendarIcon className="mr-2 size-4" />
+                  {date ? (
+                    format(date, "PPP HH:mm:ss")
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={(d) => handleSelect(d)}
+                  initialFocus
+                />
+                <div className="border-t border-border p-3">
+                  <TimePickerDemo setDate={setDate} date={date} />
+                </div>
+              </PopoverContent>
+            </Popover>
 
-    {/* Title Input */}
-    <Input
-      placeholder="Enter event title..."
-      value={eventTitle}
-      onChange={(e) => setEventTitle(e.target.value)}
-      className="flex-1 bg-white text-center font-semibold"
-    />
+            {/* Title Input */}
+            <Input
+              placeholder="Enter event title..."
+              value={eventTitle}
+              onChange={(e) => setEventTitle(e.target.value)}
+              className="flex-1 bg-white text-center font-semibold"
+            />
 
-    {/* Description Input */}
-    <Textarea
-      placeholder="Enter description (max 2000 characters)..."
-      value={description}
-      onChange={(e) => setDescription(e.target.value.slice(0, 2000))}
-      className="w-full bg-white"
-      rows={4}
-    />
+            {/* Description Input */}
+            <Textarea
+              placeholder="Enter description (max 2000 characters)..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value.slice(0, 2000))}
+              className="w-full bg-white"
+              rows={4}
+            />
 
-    {/* Signup Link Input */}
-    <Input
-      placeholder="Enter signup link..."
-      value={signupLink}
-      onChange={(e) => setSignupLink(e.target.value)}
-      className="w-full bg-white"
-    />
+            {/* Signup Link Input */}
+            <Input
+              placeholder="Enter signup link..."
+              value={signupLink}
+              onChange={(e) => setSignupLink(e.target.value)}
+              className="w-full bg-white"
+            />
 
-    {/* Event Link */}
-    <Input
-      placeholder="Enter event link..."
-      value={eventLink}
-      onChange={(e) => setEventLink(e.target.value)}
-      className="w-full bg-white"
-    />
+            {/* Event Link */}
+            <Input
+              placeholder="Enter event link..."
+              value={event_link}
+              onChange={(e) => setEventLink(e.target.value)}
+              className="w-full bg-white"
+            />
 
-    {/* Location Input */}
-    <Input
-      placeholder="Enter location..."
-      value={location}
-      onChange={(e) => setLocation(e.target.value)}
-      className="w-full sm:w-[48%] bg-white"
-    />
+            {/* Location Input */}
+            <Input
+              placeholder="Enter location..."
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="w-full bg-white sm:w-[48%]"
+            />
 
-    {/* Allowed Guests Dropdown */}
-    <Select value={allowedGuests} onValueChange={setAllowedGuests}>
-      <SelectTrigger className="w-full sm:w-[48%] bg-white">
-        <SelectValue placeholder="Select allowed guests" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all_students">All Students</SelectItem>
-        <SelectItem value="members">Chapter Members Only</SelectItem>
-        <SelectItem value="members_plus_one">Chapter Members + 1 Guest</SelectItem>
-        <SelectItem value="kmr">KMR Members</SelectItem>
-        <SelectItem value="everyone">Everyone</SelectItem>
-      </SelectContent>
-    </Select>
+            {/* Allowed Guests Dropdown */}
+            <Select value={allowedGuests} onValueChange={setAllowedGuests}>
+              <SelectTrigger className="w-full bg-white sm:w-[48%]">
+                <SelectValue placeholder="Select allowed guests" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all_students">All Students</SelectItem>
+                <SelectItem value="members">Chapter Members Only</SelectItem>
+                <SelectItem value="members_plus_one">
+                  Chapter Members + 1 Guest
+                </SelectItem>
+                <SelectItem value="kmr">KMR Members</SelectItem>
+                <SelectItem value="everyone">Everyone</SelectItem>
+              </SelectContent>
+            </Select>
 
-    {/* Price w/o Alcohol */}
-    <Input
-      placeholder="Price w/o alcohol..."
-      type="number"
-      min="0"
-      value={priceWithoutAlcohol}
-      onChange={(e) => setPriceWithoutAlcohol(e.target.value)}
-      className="w-full sm:w-[48%] bg-white"
-    />
+            {/* Price w/o Alcohol */}
+            <Input
+              placeholder="Price w/o alcohol..."
+              type="number"
+              min="0"
+              value={priceWithoutAlcohol}
+              onChange={(e) => setPriceWithoutAlcohol(e.target.value)}
+              className="w-full bg-white sm:w-[48%]"
+            />
 
-    {/* Price with Alcohol */}
-    <Input
-      placeholder="Price with alcohol..."
-      type="number"
-      min="0"
-      value={priceWithAlcohol}
-      onChange={(e) => setPriceWithAlcohol(e.target.value)}
-      className="w-full sm:w-[48%] bg-white"
-    />
+            {/* Price with Alcohol */}
+            <Input
+              placeholder="Price with alcohol..."
+              type="number"
+              min="0"
+              value={priceWithAlcohol}
+              onChange={(e) => setPriceWithAlcohol(e.target.value)}
+              className="w-full bg-white sm:w-[48%]"
+            />
 
-    {/* Submit Button */}
-    <Button variant="default" onClick={addDinner} className="w-full">
-      <PlusIcon className="size-5 mr-2" />
-      Add Event
-    </Button>
-  </div>
-
+            {/* Submit Button */}
+            <Button variant="default" onClick={addDinner} className="w-full">
+              <PlusIcon className="mr-2 size-5" />
+              Add Event
+            </Button>
+          </div>
 
           {/* List of Dinners */}
 
           <div className="mt-4 w-full max-w-[1200px] space-y-2">
-      {dinners.length === 0 ? (
-        <p className="text-[hsl(var(--muted-foreground))]">No dinners available.</p>
-      ) : (
-        <Accordion type="single" collapsible className="space-y-2">
-          {dinners.map((dinner) => (
-            <DinnerAccordionItem
-              key={dinner.id}
-              dinner={dinner}
-              deleteDinner={deleteDinner}
-              updateDinner={updateDinner}
-              formatDate={formatDate}
-            />
-          ))}
-        </Accordion>
-      )}
-    </div>
-
-        
-    
-        
+            {dinners.length === 0 ? (
+              <p className="text-[hsl(var(--muted-foreground))]">
+                No dinners available.
+              </p>
+            ) : (
+              <Accordion type="single" collapsible className="space-y-2">
+                {dinners.map((dinner) => (
+                  <DinnerAccordionItem
+                    key={dinner.id}
+                    dinner={dinner}
+                    deleteDinner={deleteDinner}
+                    updateDinner={updateDinner}
+                    formatDate={formatDate}
+                    showMessage={showMessage}
+                  />
+                ))}
+              </Accordion>
+            )}
+          </div>
         </div>
       </SidebarInset>
     </SidebarProvider>
