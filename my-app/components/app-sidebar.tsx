@@ -90,8 +90,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       .catch(() => setUser({ id: 0, username: "Guest", organizationName: "Demo" })); // Fallback if error
   }, []);
 
-  console.log(user);
-
   // Handle logout
   const handleLogout = async () => {
     setError(undefined);

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { CalendarIcon, PlusIcon } from "lucide-react";
 import { toZonedTime } from "date-fns-tz";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,7 +22,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { Trash2, Pencil } from "lucide-react"; // Import icons
+import { Trash2, Pencil, Save } from "lucide-react"; // Import icons
 import {
   Popover,
   PopoverTrigger,
@@ -32,36 +33,286 @@ import { cn } from "@/lib/utils";
 import React from "react";
 import { add, format } from "date-fns";
 import { TimePickerDemo } from "@/components/time-picker-demo";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+
+ function DateTimePicker({ date, setDate,  disabled, }: { date: Date | undefined; setDate: (date: Date | undefined) => void;  disabled?: boolean; }) {
+  const handleSelect = (selectedDate: Date | undefined) => {
+    if (selectedDate) setDate(selectedDate);
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          disabled={disabled}
+          variant="outline"
+          className={cn(
+            "w-full justify-start truncate text-left font-normal",
+            !date && "text-muted-foreground"
+          )}
+        >
+          <CalendarIcon className="mr-2 size-4" />
+          {date ? format(date, "PPP HH:mm:ss") : <span>Pick a date</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={handleSelect}
+          initialFocus
+        />
+        <div className="border-t border-border p-3">
+          <TimePickerDemo setDate={setDate} date={date} />
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 
-
-type Pub = {
+type Dinner = {
   id: number;
   title: string;
   date: string;
-  auto_created: boolean;
-};
+  signup_link: string;
+  description: string;
+  event_link: string;
+  location: string;
+  allowed_guests: string;
+  price_without_alcohol: number;
+  price_with_alcohol: number;
+}
+
+interface DinnerListProps {
+  dinners: Dinner[];
+  deleteDinner: (id: number) => void;
+  updateDinner: (dinner: Dinner) => void; // Callback for saving changes
+  formatDate: (date: string) => string;
+}
+
+interface DatePickerProps {
+  date: Date | null;
+  setDate: (date: Date | null) => void;
+  editable: boolean;
+}
+
+
+
+function DinnerAccordionItem({
+  dinner,
+  deleteDinner,
+  updateDinner,
+  formatDate,
+}: {
+  dinner: Dinner;
+  deleteDinner: (id: number) => void;
+  updateDinner: (dinner: Dinner) => void;
+  formatDate: (date: string) => string;
+}) {
+  const [editable, setEditable] = useState(false);
+  const [editedDinner, setEditedDinner] = useState<Dinner>(dinner);
+  const [allowedGuests, setAllowedGuests] = useState("");
+  const [date, setDate] = React.useState<Date>();
+
+  const handleChange = (field: keyof Dinner, value: string | number) => {
+    setEditedDinner((prev) => ({ ...prev, [field]: value }));
+  };
+
+
+  const handleSave = () => {
+    updateDinner(editedDinner);
+    setEditable(false);
+  };
+
+
+
+  return (
+    <AccordionItem value={`dinner-${dinner.id}`} className="rounded-lg border bg-muted/50">
+      <div className="flex flex-col sm:flex-row items-center justify-between p-4">
+        {/* Date */}
+        <div className="rounded-lg border border-gray-300 bg-gray-200 px-3 py-1 text-lg font-medium text-primary shadow-sm">
+          {formatDate(dinner.date)}
+        </div>
+
+        {/* Dinner Title */}
+        <div className="font-regular flex flex-col items-center text-center text-xl sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:items-start sm:text-left">
+          {dinner.title}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="mt-2 flex w-full justify-end gap-2 sm:mt-0 sm:w-1/4">
+          {editable ? (
+            <Button size="icon" variant="default" onClick={handleSave}>
+              <Save className="size-4" />
+            </Button>
+          ) : (
+            <Button size="icon" variant="outline" onClick={() => setEditable(true)}>
+              <Pencil className="size-4" />
+            </Button>
+          )}
+          <Button
+            size="icon"
+            variant="destructive"
+            onClick={() => {
+              if (confirm("Are you sure you want to delete this dinner? This action cannot be undone.")) {
+                deleteDinner(dinner.id);
+              }
+            }}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Expand Button */}
+      <AccordionTrigger className="w-full border-t px-4 py-2 text-sm font-medium hover:bg-muted">
+        Show details
+      </AccordionTrigger>
+
+      {/* Dinner Details */}
+       {/* Date Display or Picker */}
+      <AccordionContent className="grid grid-cols-1 gap-4 border-t px-4 py-3 sm:grid-cols-2">
+
+           {/* Date Display or Picker */}
+        <div className="flex flex-col gap-1">
+        <Label htmlFor={`title-${dinner.id}`}>Date</Label>
+        <DateTimePicker
+    date={editedDinner.date ? new Date(editedDinner.date) : undefined}
+    setDate={(selectedDate) => {
+      setDate(selectedDate);
+      handleChange("date", selectedDate ? selectedDate.toISOString() : "");
+    }}
+    disabled={!editable}
+  />
+        </div>
+
+
+        <div className="flex flex-col gap-1">
+          <Label htmlFor={`title-${dinner.id}`}>Title</Label>
+          <Input
+            id={`title-${dinner.id}`}
+            value={editedDinner.title}
+            disabled={!editable}
+            onChange={(e) => handleChange("title", e.target.value)}
+            className="bg-white"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Label htmlFor={`location-${dinner.id}`}>Location</Label>
+          <Input
+            id={`location-${dinner.id}`}
+            value={editedDinner.location}
+            disabled={!editable}
+            onChange={(e) => handleChange("location", e.target.value)}
+            className="bg-white"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Label>Allowed Guests</Label>
+          <Select
+            value={editedDinner.allowed_guests}
+            onValueChange={(value) => handleChange("allowed_guests", value)}
+            disabled={!editable}
+          >
+            <SelectTrigger className="w-full bg-white">
+              <SelectValue placeholder="Select allowed guests" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all_students">All Students</SelectItem>
+              <SelectItem value="members">Chapter Members Only</SelectItem>
+              <SelectItem value="members_plus_one">Chapter Members + 1 Guest</SelectItem>
+              <SelectItem value="kmr">KMR Members</SelectItem>
+              <SelectItem value="everyone">Everyone</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+
+        <div className="flex flex-col gap-1">
+          <Label htmlFor={`price-without-alcohol-${dinner.id}`}>Price (without alcohol)</Label>
+          <Input
+            id={`price-without-alcohol-${dinner.id}`}
+            type="number"
+            value={editedDinner.price_without_alcohol}
+            disabled={!editable}
+            onChange={(e) => handleChange("price_without_alcohol", Number(e.target.value))}
+            className="bg-white"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Label htmlFor={`price-with-alcohol-${dinner.id}`}>Price (with alcohol)</Label>
+          <Input
+            id={`price-with-alcohol-${dinner.id}`}
+            type="number"
+            value={editedDinner.price_with_alcohol}
+            disabled={!editable}
+            onChange={(e) => handleChange("price_with_alcohol", Number(e.target.value))}
+            className="bg-white"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Label htmlFor={`signup-link-${dinner.id}`}>Signup Link</Label>
+          <Input
+            id={`signup-link-${dinner.id}`}
+            value={editedDinner.signup_link}
+            disabled={!editable}
+            onChange={(e) => handleChange("signup_link", e.target.value)}
+            className="bg-white"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Label htmlFor={`event-link-${dinner.id}`}>Event Link</Label>
+          <Input
+            id={`event-link-${dinner.id}`}
+            value={editedDinner.event_link}
+            disabled={!editable}
+            onChange={(e) => handleChange("event_link", e.target.value)}
+            className="bg-white"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1 sm:col-span-2">
+          <Label htmlFor={`description-${dinner.id}`}>Description</Label>
+          <Input
+            id={`description-${dinner.id}`}
+            value={editedDinner.description}
+            disabled={!editable}
+            onChange={(e) => handleChange("description", e.target.value)}
+            className="bg-white"
+          />
+        </div>
+
+       
+      </AccordionContent>
+    </AccordionItem>
+  );
+}
+
+
 
 export default function Page() {
-  const [pubs, setPubs] = useState<Pub[]>([]);
+  const [dinners, setDinners] = useState<Dinner[]>([]);
   const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [pubName, setPubName] = useState("");
   const [date, setDate] = React.useState<Date>();
   const [eventLink, setEventLink] = useState("");
 
-const [eventTitle, setEventTitle] = useState("");
-const [description, setDescription] = useState("");
-const [signupLink, setSignupLink] = useState("");
-const [location, setLocation] = useState("");
-const [allowedGuests, setAllowedGuests] = useState("");
-const [priceWithoutAlcohol, setPriceWithoutAlcohol] = useState("");
-const [priceWithAlcohol, setPriceWithAlcohol] = useState("");
+  const [eventTitle, setEventTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [signupLink, setSignupLink] = useState("");
+  const [location, setLocation] = useState("");
+  const [allowedGuests, setAllowedGuests] = useState("");
+  const [priceWithoutAlcohol, setPriceWithoutAlcohol] = useState("");
+  const [priceWithAlcohol, setPriceWithAlcohol] = useState("");
 
 
   const [message, setMessage] = useState<{
-
-  
     text: string;
     type: "success" | "error";
   }>();
@@ -72,11 +323,6 @@ const [priceWithAlcohol, setPriceWithAlcohol] = useState("");
     setTimeout(() => setMessage(undefined), 3000);
   };
 
-  const openEditDialog = (pub: Pub) => {
-    setEditPub(pub);
-    setName(pub.title);
-    setDate(new Date(pub.date));
-  };
 
   const formatDate = (isoString: string) => {
     const date = new Date(isoString);
@@ -95,7 +341,6 @@ const [priceWithAlcohol, setPriceWithAlcohol] = useState("");
     const formattedDate = new Intl.DateTimeFormat("en-GB", options).format(
       date,
     );
-
 
     const [weekday, day, month, time] = formattedDate.split(" ");
 
@@ -136,20 +381,20 @@ const [priceWithAlcohol, setPriceWithAlcohol] = useState("");
 
   // Fetch Pubs
   useEffect(() => {
-    async function fetchPubs() {
+    async function fetchDinners() {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/events/getUpcoming`,
+          `${process.env.NEXT_PUBLIC_API_URL}/api/dinners/getUpcoming`,
           {
             method: "GET",
             credentials: "include",
           },
         );
 
-        if (!response.ok) throw new Error("Failed to fetch pubs");
+        if (!response.ok) throw new Error("Failed to fetch dinners");
 
         const data = await response.json();
-        setPubs(data);
+        setDinners(data);
       } catch (error: unknown) {
         if (error instanceof Error) {
           setMessage({ text: error.message, type: "error" });
@@ -158,12 +403,12 @@ const [priceWithAlcohol, setPriceWithAlcohol] = useState("");
         }
       }
     }
-    fetchPubs();
+    fetchDinners();
   }, []);
 
-  // Add Pub Handler
+  // Add Dinner
   const addDinner = async () => {
-    if (!pubName || !date) {
+    if (!eventTitle || !date) {
       showMessage("Please provide both name and date.", "error");
       return;
     }
@@ -193,14 +438,13 @@ const [priceWithAlcohol, setPriceWithAlcohol] = useState("");
 
       if (!response.ok) {
         throw new Error(
-          response.status === 409 ? "Pub already exists" : "Failed to add pub",
+          response.status === 409 ? "Dinner already exists" : "Failed to add Dinner",
         );
       }
 
-      const newPub = await response.json();
-      setPubs([...pubs, newPub.event]); // Update UI
-      setName(""); // Clear input
-      showMessage("Pub added successfully!", "success");
+      const newDinner = await response.json();
+      setDinners([...dinners, newDinner.dinner]);
+      showMessage("Dinner added successfully!", "success");
     } catch (error: unknown) {
       if (error instanceof Error) {
         setMessage({ text: error.message, type: "error" });
@@ -212,21 +456,20 @@ const [priceWithAlcohol, setPriceWithAlcohol] = useState("");
     }
   };
 
-  // Delete Pub Handler
-  const deletePub = async (id: number) => {
+  const deleteDinner = async (id: number) => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/events/delete${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/dinners/delete${id}`,
         {
           method: "DELETE",
           credentials: "include",
         },
       );
 
-      if (!response.ok) throw new Error("Failed to delete pub");
+      if (!response.ok) throw new Error("Failed to delete dinner");
 
-      setPubs(pubs.filter((pub) => pub.id !== id)); // Remove from UI
-      showMessage("Pub deleted successfully!", "success");
+      setDinners(dinners.filter((dinner) => dinner.id !== id)); // Remove from UI
+      showMessage("Dinner deleted successfully!", "success");
     } catch (error: unknown) {
       if (error instanceof Error) {
         setMessage({ text: error.message, type: "error" });
@@ -236,39 +479,34 @@ const [priceWithAlcohol, setPriceWithAlcohol] = useState("");
     }
   };
 
-  const updatePub = async () => {
-    if (!editPub) return;
-    if (!name) {
-      showMessage("Add an event name", "error");
-      return;
-    }
-    if (!date) {
-      showMessage("Add a date", "error");
-      return;
-    }
+  const updateDinner = async () => {
 
+
+   
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/events/update${editPub.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/dinners/update${editPub.id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ title: name, date }),
+          body: JSON.stringify({
+            id: editPub.id,
+            title: editPub.title,
+            date : editPub.date,
+            description: editPub.description,
+            signup_link: editPub.signup_link,
+            event_link: editPub.event_link,
+            location: editPub.location,
+            allowed_guests: editPub.allowed_guests,
+            price_without_alcohol: editPub.price_without_alcohol,
+            price_with_alcohol: editPub.price_with_alcohol,
+          }),
         },
       );
 
-      if (!response.ok) throw new Error("Failed to update pub");
+      if (!response.ok) throw new Error("Failed to update Dinner");
 
-      setPubs((prevPubs) =>
-        prevPubs.map((p) =>
-          p.id === editPub.id
-            ? { ...p, title: name, date: date?.toISOString() || p.date }
-            : p,
-        ),
-      );
-
-      setEditPub(undefined);
     } catch (error: unknown) {
       if (error instanceof Error) {
         setMessage({ text: error.message, type: "error" });
@@ -277,6 +515,9 @@ const [priceWithAlcohol, setPriceWithAlcohol] = useState("");
       }
     }
   };
+
+
+  
 
   return (
     <SidebarProvider>
@@ -305,7 +546,6 @@ const [priceWithAlcohol, setPriceWithAlcohol] = useState("");
         )}
 
         <div className="p-4">
-          {/* Add Pub Row */}
           <div className="mb-4 flex w-full max-w-[1200px] flex-wrap gap-4 rounded-lg border bg-secondary p-4 shadow-sm">
     
     {/* Date Picker */}
@@ -418,119 +658,29 @@ const [priceWithAlcohol, setPriceWithAlcohol] = useState("");
   </div>
 
 
-          {/* List of Pubs */}
+          {/* List of Dinners */}
+
           <div className="mt-4 w-full max-w-[1200px] space-y-2">
-            {pubs.length === 0 ? (
-              <p className="text-[hsl(var(--muted-foreground))]">
-                No pubs available.
-              </p>
-            ) : (
-              pubs.map((pub) => (
-                <div
-                  key={pub.id}
-                  className="relative flex flex-col items-center justify-between rounded-lg border bg-muted/50 p-4 sm:flex-row"
-                >
-                  {/* Date */}
+      {dinners.length === 0 ? (
+        <p className="text-[hsl(var(--muted-foreground))]">No dinners available.</p>
+      ) : (
+        <Accordion type="single" collapsible className="space-y-2">
+          {dinners.map((dinner) => (
+            <DinnerAccordionItem
+              key={dinner.id}
+              dinner={dinner}
+              deleteDinner={deleteDinner}
+              updateDinner={updateDinner}
+              formatDate={formatDate}
+            />
+          ))}
+        </Accordion>
+      )}
+    </div>
 
-                  <div className="rounded-lg border border-gray-300 bg-gray-200 px-3 py-1 text-lg font-medium text-primary shadow-sm">
-                    {formatDate(pub.date)}
-                  </div>
-
-                  {/* Pub Name Centered */}
-                  <div className="font-regular flex flex-col items-center text-center text-xl sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:items-start sm:text-left">
-                    {pub.title}
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="mt-2 flex w-full items-center justify-end gap-2 sm:mt-0 sm:w-1/4">
-                    {pub.auto_created && (
-                      <span className="border-black-300 flex h-8 items-center rounded-md border bg-green-600 px-2 py-0.5 text-[12px] font-semibold text-white">
-                        System Generated
-                      </span>
-                    )}
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() => openEditDialog(pub)}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                      </DialogTrigger>
-                    </Dialog>
-                    <Button
-                      size="icon"
-                      variant="destructive"
-                      onClick={() => {
-                        if (
-                          globalThis.confirm(
-                            "Are you sure you want to delete this pub? This action cannot be undone.",
-                          )
-                        ) {
-                          deletePub(pub.id);
-                        }
-                      }}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          <Dialog
-            open={Boolean(editPub)}
-            onOpenChange={(open) => !open && setEditPub(undefined)}
-          >
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Edit Pub</DialogTitle>
-              </DialogHeader>
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-[70%] justify-start truncate text-left font-normal",
-                      !date && "text-muted-foreground",
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 size-4" />
-                    {date ? (
-                      format(date, "PPP HH:mm:ss")
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={(d) => handleSelect(d)}
-                    initialFocus
-                  />
-                  <div className="border-t border-border p-3">
-                    <TimePickerDemo setDate={setDate} date={date} />
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Pub name"
-                className="mb-2"
-              />
-
-              <Button onClick={updatePub} className="mt-4 w-full">
-                Save Changes
-              </Button>
-            </DialogContent>
-          </Dialog>
+        
+    
+        
         </div>
       </SidebarInset>
     </SidebarProvider>
