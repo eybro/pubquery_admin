@@ -110,7 +110,7 @@ function DinnerAccordionItem({
 }) {
   const [editable, setEditable] = useState(false);
   const [editedDinner, setEditedDinner] = useState<Dinner>(dinner);
-  const [setDate] = React.useState<Date>();
+  const [date, setDate] = React.useState<Date>();
 
   const handleChange = (field: keyof Dinner, value: string | number) => {
     if (field === "date") {
@@ -121,8 +121,7 @@ function DinnerAccordionItem({
         return;
       }
     }
-
-    setEditedDinner((prev) => ({ ...prev, [field]: value }));
+    setEditedDinner((prev) => ({ ...prev, [field]: date || value }));
   };
 
   const handleSave = () => {
