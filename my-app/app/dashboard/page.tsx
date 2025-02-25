@@ -35,7 +35,7 @@ type Pub = {
   id: number;
   title: string;
   date: string;
-  auto_created: boolean;
+  auto_created: number;
 };
 
 export default function Page() {
@@ -222,6 +222,9 @@ export default function Page() {
       return;
     }
 
+    const localDate = toZonedTime(date, "Europe/Stockholm");
+    const formattedDate = format(localDate, "yyyy-MM-dd'T'HH:mm:ssXXX");
+
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/events/update${editPub.id}`,
@@ -229,11 +232,13 @@ export default function Page() {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ title: name, date }),
+          body: JSON.stringify({ title: name, date: formattedDate }),
         },
       );
 
       if (!response.ok) throw new Error("Failed to update pub");
+
+      setMessage({ text: "Pub updated successfully!", type: "success" });
 
       setPubs((prevPubs) =>
         prevPubs.map((p) =>
@@ -352,7 +357,7 @@ export default function Page() {
 
                   {/* Action Buttons */}
                   <div className="mt-2 flex w-full items-center justify-end gap-2 sm:mt-0 sm:w-1/4">
-                    {pub.auto_created && (
+                    {pub.auto_created === 1 && (
                       <span className="border-black-300 flex h-8 items-center rounded-md border bg-green-600 px-2 py-0.5 text-[12px] font-semibold text-white">
                         System Generated
                       </span>
