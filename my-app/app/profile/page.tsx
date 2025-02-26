@@ -72,7 +72,7 @@ export default function Page() {
                     <Skeleton className="h-6 w-2/3" />
                     <Skeleton className="h-6 w-1/3" />
                   </div>
-                ) : profile ? (
+                ) : (profile ? (
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <p>
@@ -113,7 +113,7 @@ export default function Page() {
                   </div>
                 ) : (
                   <p className="text-red-500">Failed to load profile info.</p>
-                )}
+                ))}
               </CardContent>
             </Card>
             {error && <p className="text-sm text-red-500">{error}</p>}
