@@ -65,7 +65,7 @@ export default function Page() {
             <h1 className="text-xl font-semibold">Reset Password</h1>
           </div>
         </header>
-        <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
+        <div className="flex min-h-svh w-full items-start justify-start p-6 md:p-10">
           <div className="w-full max-w-sm">
             <h3 className="mb-4 text-center">Reset Your Password</h3>
             <form onSubmit={handleResetPassword}>

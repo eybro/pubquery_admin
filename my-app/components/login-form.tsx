@@ -58,7 +58,7 @@ export function LoginForm({
         <CardHeader>
           <CardTitle className="text-2xl">Login</CardTitle>
           <CardDescription>
-            Enter your username and password below to login to your account
+            Enter your username and password below to login to your account.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -69,7 +69,6 @@ export function LoginForm({
                 <Input
                   id="email"
                   type="username"
-                  placeholder="username"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required

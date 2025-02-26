@@ -238,7 +238,7 @@ export default function Page() {
 
       if (!response.ok) throw new Error("Failed to update pub");
 
-      setMessage({ text: "Pub updated successfully!", type: "success" });
+      showMessage("Pub updated successfully!", "success");
 
       setPubs((prevPubs) =>
         prevPubs.map((p) =>

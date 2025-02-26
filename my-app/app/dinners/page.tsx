@@ -110,7 +110,6 @@ function DinnerAccordionItem({
 }) {
   const [editable, setEditable] = useState(false);
   const [editedDinner, setEditedDinner] = useState<Dinner>(dinner);
-  const [date, setDate] = React.useState<Date>();
 
   const handleChange = (field: keyof Dinner, value: string | number) => {
     if (field === "date") {
@@ -121,7 +120,7 @@ function DinnerAccordionItem({
         return;
       }
     }
-    setEditedDinner((prev) => ({ ...prev, [field]: date || value }));
+    setEditedDinner((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSave = () => {
@@ -134,16 +133,19 @@ function DinnerAccordionItem({
       value={`dinner-${dinner.id}`}
       className="rounded-lg border bg-muted/50"
     >
-      <div className="flex flex-col items-center justify-between p-4 sm:flex-row">
-        {/* Date */}
+      <div className="relative flex items-center justify-between p-4">
+        {/* Left: Date */}
         <div className="rounded-lg border border-gray-300 bg-gray-200 px-3 py-1 text-lg font-medium text-primary shadow-sm">
           {formatDate(dinner.date)}
         </div>
 
-        {/* Dinner Title */}
-        <div className="font-regular flex flex-col items-center text-center text-xl sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:items-start sm:text-left">
+        {/* Center: Dinner Title */}
+        <div className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-center text-xl">
           {dinner.title}
         </div>
+
+        {/* Right: Invisible placeholder to balance layout */}
+        <div className="invisible h-8 w-[120px]" />
 
         {/* Action Buttons */}
         <div className="mt-2 flex w-full justify-end gap-2 sm:mt-0 sm:w-1/4">
@@ -192,7 +194,6 @@ function DinnerAccordionItem({
           <DateTimePicker
             date={editedDinner.date ? new Date(editedDinner.date) : undefined}
             setDate={(selectedDate) => {
-              setDate(selectedDate);
               handleChange("date", selectedDate?.toISOString() || "");
             }}
             disabled={!editable}
@@ -392,7 +393,7 @@ export default function Page() {
     setDate(newDateFull);
   };
 
-  // Fetch Pubs
+  // Fetch dinners
   useEffect(() => {
     async function fetchDinners() {
       try {
@@ -421,12 +422,15 @@ export default function Page() {
 
   // Add Dinner
   const addDinner = async () => {
-    if (!eventTitle || !date) {
-      showMessage("Please provide both name and date.", "error");
+    if (!eventTitle || !date || !allowedGuests) {
+      showMessage(
+        "Please provide at least title, date and allowed guests.",
+        "error",
+      );
       return;
     }
 
-    const localDate = toZonedTime(date, "Europe/Stockholm"); 
+    const localDate = toZonedTime(date, "Europe/Stockholm");
     const formattedDate = format(localDate, "yyyy-MM-dd'T'HH:mm:ssXXX");
 
     setIsLoading(true);
@@ -485,7 +489,7 @@ export default function Page() {
 
       if (!response.ok) throw new Error("Failed to delete dinner");
 
-      setDinners(dinners.filter((dinner) => dinner.id !== id)); 
+      setDinners(dinners.filter((dinner) => dinner.id !== id));
       showMessage("Dinner deleted successfully!", "success");
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -497,7 +501,7 @@ export default function Page() {
   };
 
   const updateDinner = async (dinner: Dinner) => {
-    const localDate = toZonedTime(dinner.date, "Europe/Stockholm"); 
+    const localDate = toZonedTime(dinner.date, "Europe/Stockholm");
     const formattedDate = format(localDate, "yyyy-MM-dd'T'HH:mm:ssXXX");
 
     try {
@@ -523,6 +527,14 @@ export default function Page() {
       );
 
       if (!response.ok) throw new Error("Failed to update Dinner");
+
+      const updatedDinner = await response.json();
+
+      setDinners((prevDinners) =>
+        prevDinners.map((d) =>
+          d.id === updatedDinner.dinner.id ? updatedDinner.dinner : d,
+        ),
+      );
 
       showMessage("Dinner updated successfully!", "success");
     } catch (error: unknown) {
