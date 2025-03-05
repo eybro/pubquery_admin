@@ -431,6 +431,9 @@ export default function Page() {
       return;
     }
 
+    const formated_singup_link = formatURL(signupLink);
+    const formated_event_link = formatURL(event_link);
+
     const localDate = toZonedTime(date, "Europe/Stockholm");
     const formattedDate = format(localDate, "yyyy-MM-dd'T'HH:mm:ssXXX");
 
@@ -446,8 +449,8 @@ export default function Page() {
             title: eventTitle,
             date: formattedDate,
             description: description,
-            signup_link: signupLink,
-            event_link: event_link,
+            signup_link: formated_singup_link,
+            event_link: formated_event_link,
             location: location,
             allowed_guests: allowedGuests,
             price_without_alcohol: priceWithoutAlcohol,
@@ -478,6 +481,14 @@ export default function Page() {
     }
   };
 
+  const formatURL = (url: string): string => {
+    const trimmedUrl = url.trim();
+    if (trimmedUrl && !/^https?:\/\//i.test(trimmedUrl)) {
+      return `https://${trimmedUrl}`;
+    }
+    return trimmedUrl;
+  };
+
   const deleteDinner = async (id: number) => {
     try {
       const response = await fetch(
@@ -505,6 +516,9 @@ export default function Page() {
     const localDate = toZonedTime(dinner.date, "Europe/Stockholm");
     const formattedDate = format(localDate, "yyyy-MM-dd'T'HH:mm:ssXXX");
 
+    const formatted_singup_link = formatURL(dinner.signup_link);
+    const formatted_event_link = formatURL(dinner.event_link);
+
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/dinners/update${dinner.id}`,
@@ -517,8 +531,8 @@ export default function Page() {
             title: dinner.title,
             date: formattedDate,
             description: dinner.description,
-            signup_link: dinner.signup_link,
-            event_link: dinner.event_link,
+            signup_link: formatted_singup_link,
+            event_link: formatted_event_link,
             location: dinner.location,
             allowed_guests: dinner.allowed_guests,
             price_without_alcohol: dinner.price_without_alcohol,
