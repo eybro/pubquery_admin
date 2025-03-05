@@ -305,7 +305,7 @@ function DinnerAccordionItem({
             value={editedDinner.description}
             disabled={!editable}
             onChange={(e) => handleChange("description", e.target.value)}
-            className="bg-white w-full"
+            className="w-full bg-white"
             rows={4} // Adjust number of visible rows
           />
         </div>
@@ -313,6 +313,14 @@ function DinnerAccordionItem({
     </AccordionItem>
   );
 }
+
+const formatURL = (url: string): string => {
+  const trimmedUrl = url.trim();
+  if (trimmedUrl && !/^https?:\/\//i.test(trimmedUrl)) {
+    return `https://${trimmedUrl}`;
+  }
+  return trimmedUrl;
+};
 
 export default function Page() {
   const [dinners, setDinners] = useState<Dinner[]>([]);
@@ -481,13 +489,7 @@ export default function Page() {
     }
   };
 
-  const formatURL = (url: string): string => {
-    const trimmedUrl = url.trim();
-    if (trimmedUrl && !/^https?:\/\//i.test(trimmedUrl)) {
-      return `https://${trimmedUrl}`;
-    }
-    return trimmedUrl;
-  };
+
 
   const deleteDinner = async (id: number) => {
     try {
