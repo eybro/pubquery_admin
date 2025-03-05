@@ -299,13 +299,14 @@ function DinnerAccordionItem({
         </div>
 
         <div className="flex flex-col gap-1 sm:col-span-2">
-          <Label htmlFor={`description-${dinner.id}`}>Description</Label>
-          <Input
+        <Label htmlFor={`description-${dinner.id}`}>Description</Label>
+          <Textarea
             id={`description-${dinner.id}`}
             value={editedDinner.description}
             disabled={!editable}
             onChange={(e) => handleChange("description", e.target.value)}
-            className="bg-white"
+            className="bg-white w-full"
+            rows={4} // Adjust number of visible rows
           />
         </div>
       </AccordionContent>
