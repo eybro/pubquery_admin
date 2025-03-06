@@ -76,14 +76,13 @@ export default function Page() {
       timeZone: "CET",
     };
 
-    let formattedDate = new Intl.DateTimeFormat("en-GB", options).format(
+    const formattedDate = new Intl.DateTimeFormat("en-GB", options).format(
       date,
     );
 
-
-    formattedDate = formattedDate.replace(",", "");
-    // console.log(formattedDate);
-    const [weekday, day, month, time] = formattedDate.split(" ");
+    let split = formattedDate.split(" ");
+    split = split.filter(word => word !== "at");
+    const [weekday, day, month, time] = split;
 
     // If it's today
     if (date.toUTCString().slice(0, 16) === now.toUTCString().slice(0, 16)) {
