@@ -38,13 +38,6 @@ type Pub = {
   auto_created: number;
 };
 
-const debugLog = (msg) => {
-  // eslint-disable-next-line unicorn/prefer-query-selector
-  const logDiv = document.getElementById("debug-log");
-  if (logDiv) {
-    logDiv.innerHTML += `<p>${msg}</p>`;
-  }
-};
 
 export default function Page() {
   const [pubs, setPubs] = useState<Pub[]>([]);
@@ -90,7 +83,6 @@ export default function Page() {
 
     formattedDate = formattedDate.replace(",", "");
     // console.log(formattedDate);
-    debugLog("Formatted date: " + formattedDate);
     const [weekday, day, month, time] = formattedDate.split(" ");
 
     // If it's today
