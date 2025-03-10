@@ -7,6 +7,7 @@ export function middleware(req: NextRequest) {
   const isLoginPage = req.nextUrl.pathname === "/login";
   const token = req.cookies.get("token")?.value;
 
+  console.log(req.cookies)
   console.log("Cookies received:", req.cookies.get("token"));
 
 
@@ -22,5 +23,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: "/:path*",
+  matcher: "/((?!_next/static|_next/image|favicon.ico|login).*)",
 };
