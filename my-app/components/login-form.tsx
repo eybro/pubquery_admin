@@ -42,7 +42,7 @@ export function LoginForm({
         throw new Error("Invalid credentials");
       }
 
-      router.push("/login"); 
+      router.push("/dashboard"); 
     } catch (error: unknown) {
       if (error instanceof Error) {
         setError(error.message);
