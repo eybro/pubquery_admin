@@ -1,5 +1,3 @@
-/* eslint-disable */
-
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -7,9 +5,6 @@ export function middleware(req: NextRequest) {
   const isLoginPage = req.nextUrl.pathname === "/login";
   const token = req.cookies.get("token")?.value;
 
-  console.log(req.cookies)
-  console.log("Cookies received:", req.cookies.get("token"));
-  console.log("Middleware triggered for:", req.nextUrl.pathname);
   if (token) {
     console.log("Token found:", token);
   }
@@ -20,7 +15,6 @@ export function middleware(req: NextRequest) {
   }
 
   if (!token) {
-    console.log("Redirecting to login page");
     return NextResponse.redirect("https://admin.pubquery.se/login");
   }
 
