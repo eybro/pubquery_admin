@@ -9,6 +9,10 @@ export function middleware(req: NextRequest) {
 
   console.log(req.cookies)
   console.log("Cookies received:", req.cookies.get("token"));
+  console.log("Middleware triggered for:", req.nextUrl.pathname);
+  if (token) {
+    console.log("Token found:", token);
+  }
 
 
   if (isLoginPage) {
@@ -16,7 +20,8 @@ export function middleware(req: NextRequest) {
   }
 
   if (!token) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    console.log("Redirecting to login page");
+    return NextResponse.redirect("https://admin.pubquery.se/login");
   }
 
   return NextResponse.next();
