@@ -15,7 +15,7 @@ export function middleware(req: NextRequest) {
 
   if (token) {
     console.log("Token found:", token);
-    return NextResponse.redirect(new URL('/login', req.url))
+    return NextResponse.next();
   }
 }
 
