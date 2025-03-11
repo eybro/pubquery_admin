@@ -10,12 +10,12 @@ export function middleware(req: NextRequest) {
 
   if (!token) {
     console.log("No token found, redirecting to login page");
-    return NextResponse.redirect("https://admin.pubquery.se");
+    return NextResponse.redirect("https://admin.pubquery.se/login");
   }
 
   if (token) {
     console.log("Token found:", token);
-    return NextResponse.next();
+    return NextResponse.redirect(new URL('/login', req.url))
   }
 }
 
