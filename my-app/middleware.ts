@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 export function middleware(req: NextRequest) {
   // const isLoginPage = req.nextUrl.pathname === "/login";
+  req.headers.set("Cache-Control", "no-store")
   const token = req.cookies.get("token")?.value;
 
   console.log("Request to", req.nextUrl.pathname);
