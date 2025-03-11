@@ -3,14 +3,14 @@ import type { NextRequest } from "next/server";
 
 export function middleware(req: NextRequest) {
   // const isLoginPage = req.nextUrl.pathname === "/login";
-  req.headers.set("Cache-Control", "no-store")
+  req.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
   const token = req.cookies.get("token")?.value;
 
   console.log("Request to", req.nextUrl.pathname);
 
   if (!token) {
     console.log("No token found, redirecting to login page");
-    return NextResponse.redirect("https://admin.pubquery.se/login");
+    return NextResponse.redirect(new URL('/login', req.url));
   }
 
   if (token) {
@@ -30,4 +30,5 @@ export const config = {
      */
     '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|login).*)',
   ],
+  runtime: 'experimental-edge'
 }
