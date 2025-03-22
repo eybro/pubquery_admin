@@ -4,9 +4,26 @@ import pub_view from "@/public/images/pub_view.png";
 import dinner_view from "@/public/images/dinner_view.png";
 import counter from "@/public/images/counter.png";
 import live_count from "@/public/images/live_count.png";
+import Head from "next/head";
 
 export default function InfoPage() {
   return (
+    <>
+      <Head>
+        <script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=G-RL1J01TPJ4"
+        ></script>
+        <script>
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-RL1J01TPJ4');
+          `}
+        </script>
+      </Head>
+
     <div className="mx-auto max-w-6xl space-y-12 p-6">
       {/* Pub Organizer Section */}
       <section className="text-center">
@@ -74,5 +91,6 @@ export default function InfoPage() {
         </div>
       </section>
     </div>
+    </>
   );
 }
