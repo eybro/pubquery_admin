@@ -299,7 +299,7 @@ function DinnerAccordionItem({
         </div>
 
         <div className="flex flex-col gap-1 sm:col-span-2">
-        <Label htmlFor={`description-${dinner.id}`}>Description</Label>
+          <Label htmlFor={`description-${dinner.id}`}>Description</Label>
           <Textarea
             id={`description-${dinner.id}`}
             value={editedDinner.description}
@@ -364,7 +364,7 @@ export default function Page() {
       date,
     );
     let split = formattedDate.split(" ");
-    split = split.filter(word => word !== "at");
+    split = split.filter((word) => word !== "at");
     const [weekday, day, month, time] = split;
 
     // If it's today
@@ -489,8 +489,6 @@ export default function Page() {
       setIsLoading(false);
     }
   };
-
-
 
   const deleteDinner = async (id: number) => {
     try {

@@ -12,8 +12,10 @@ export function middleware(req: NextRequest) {
 
   if (!token) {
     console.log("No token found, redirecting to login page");
-    return NextResponse.redirect(new URL('/login', req.url), { 
-      headers: { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" }
+    return NextResponse.redirect(new URL("/login", req.url), {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+      },
     });
   }
 
@@ -32,7 +34,7 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico, sitemap.xml, robots.txt (metadata files)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|login).*)',
+    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|login|info).*)",
   ],
-  runtime: 'experimental-edge'
-}
+  runtime: "experimental-edge",
+};
