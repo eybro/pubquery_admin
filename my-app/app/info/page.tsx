@@ -6,14 +6,13 @@ import dinner_view from "@/public/images/dinner_view.png";
 import counter from "@/public/images/counter.png";
 import live_count from "@/public/images/live_count.png";
 import pub_view from "@/public/images/pub_view.png";
-import ReactGA from 'react-ga';
+import ReactGA from 'react-ga4';
 import { useEffect } from "react";
 
 export default function InfoPage() {
   useEffect(() => {
     ReactGA.initialize("G-RL1J01TPJ4");
-    {/* eslint-disable-next-line unicorn/prefer-global-this */}
-    ReactGA.pageview(window.location.pathname + window.location.search);
+    ReactGA.send("pageview");
   }, []);
 
   return (
