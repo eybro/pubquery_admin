@@ -5,7 +5,7 @@ import Link from "next/link";
 import dinner_view from "@/public/images/dinner_view.png";
 import counter from "@/public/images/counter.png";
 import live_count from "@/public/images/live_count.png";
-import pub_view from "@/public/images/live_count.png";
+import pub_view from "@/public/images/pub_view.png";
 import ReactGA from 'react-ga';
 import { useEffect } from "react";
 
