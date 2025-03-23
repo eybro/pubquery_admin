@@ -39,6 +39,7 @@ export default function SignupForm() {
         setSuccess(true);
         setFormData({ name: "", email: "", organization: "", facebook: "" });
         setOpen(false);
+        alert("Tack! Vi kontaktar dig snart.");
       } else {
         alert("Något gick fel. Försök igen.");
       }
