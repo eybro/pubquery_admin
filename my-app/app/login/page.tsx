@@ -1,6 +1,7 @@
 import { LoginForm } from "@/components/login-form";
 import Image from "next/image";
 import Logo from "@/public/images/logo.svg";
+import SignupForm from "@/components/signup-form";
 
 export default function Page() {
   return (
@@ -11,6 +12,7 @@ export default function Page() {
 
         {/* Login Form */}
         <LoginForm />
+        <SignupForm />
       </div>
     </div>
   );

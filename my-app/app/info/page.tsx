@@ -8,6 +8,7 @@ import live_count from "@/public/images/live_count.png";
 import pub_view from "@/public/images/pub_view.png";
 import ReactGA from 'react-ga4';
 import { useEffect } from "react";
+import SignupForm from "@/components/signup-form";
 
 export default function InfoPage() {
   useEffect(() => {
@@ -50,12 +51,7 @@ export default function InfoPage() {
           >
             Logga in
           </Link>
-          <a
-            href="mailto:info@pubquery.se"
-            className="rounded-lg bg-green-600 px-6 py-3 text-white shadow-md transition hover:bg-green-700"
-          >
-            Skapa konto
-          </a>
+          <SignupForm />
         </div>
       </section>
 
