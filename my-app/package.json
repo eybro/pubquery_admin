@@ -39,6 +39,8 @@
     "react-datetime": "^3.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^19.0.0",
+    "react-ga": "^3.3.1",
+    "react-ga4": "^2.1.0",
     "react-hook-form": "^7.54.2",
     "react-time-picker": "^7.0.0",
     "sonner": "^1.7.4",
