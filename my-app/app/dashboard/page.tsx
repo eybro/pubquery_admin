@@ -38,7 +38,6 @@ type Pub = {
   auto_created: number;
 };
 
-
 export default function Page() {
   const [pubs, setPubs] = useState<Pub[]>([]);
   const [name, setName] = useState("");
@@ -81,7 +80,7 @@ export default function Page() {
     );
 
     let split = formattedDate.split(" ");
-    split = split.filter(word => word !== "at");
+    split = split.filter((word) => word !== "at");
     const [weekday, day, month, time] = split;
 
     // If it's today

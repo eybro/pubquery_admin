@@ -42,7 +42,7 @@ export function LoginForm({
         throw new Error("Invalid credentials");
       }
 
-      router.push("/dashboard"); 
+      router.push("/dashboard");
     } catch (error: unknown) {
       if (error instanceof Error) {
         setError(error.message);
@@ -58,7 +58,8 @@ export function LoginForm({
         <CardHeader>
           <CardTitle className="text-2xl">Login</CardTitle>
           <CardDescription>
-            Behöver ditt klubbmästeri / sektion / förening ett konto? Kontakta info@pubquery.se
+            Behöver ditt klubbmästeri / sektion / förening ett konto? Kontakta
+            info@pubquery.se
           </CardDescription>
         </CardHeader>
         <CardContent>
