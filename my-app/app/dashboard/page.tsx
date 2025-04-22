@@ -147,37 +147,49 @@ function PubAccordionItem({
       {pub.title}
     </div>
 
+    
+
     {/* Action Buttons (right on larger screens) */}
-    <div className="flex items-center justify-end gap-2 sm:w-1/4">
-      {editable ? (
-        <Button size="icon" variant="default" onClick={handleSave}>
-          <Save className="size-4" />
-        </Button>
-      ) : (
-        <Button
-          size="icon"
-          variant="outline"
-          onClick={() => setEditable(true)}
-        >
-          <Pencil className="size-4" />
-        </Button>
-      )}
+    {/* Action Buttons (right on larger screens) */}
+<div className="flex flex-col items-end gap-2 sm:w-1/4">
+  <div className="flex items-center gap-2">
+    {editable ? (
+      <Button size="icon" variant="default" onClick={handleSave}>
+        <Save className="size-4" />
+      </Button>
+    ) : (
       <Button
         size="icon"
-        variant="destructive"
-        onClick={() => {
-          if (
-            confirm(
-              "Are you sure you want to delete this pub? This action cannot be undone.",
-            )
-          ) {
-            deletePub(pub.id);
-          }
-        }}
+        variant="outline"
+        onClick={() => setEditable(true)}
       >
-        <Trash2 className="size-4" />
+        <Pencil className="size-4" />
       </Button>
-    </div>
+    )}
+    <Button
+      size="icon"
+      variant="destructive"
+      onClick={() => {
+        if (
+          confirm(
+            "Are you sure you want to delete this pub? This action cannot be undone.",
+          )
+        ) {
+          deletePub(pub.id);
+        }
+      }}
+    >
+      <Trash2 className="size-4" />
+    </Button>
+  </div>
+  
+  {pub.auto_created === 1 && (
+    <span className="border-black-300 inline-flex h-6 items-center rounded-md border bg-green-600 px-2 py-0.5 text-[12px] font-semibold text-white">
+      System Generated
+    </span>
+  )}
+</div>
+
   </div>
 
       {/* Expand Button */}
@@ -214,7 +226,7 @@ function PubAccordionItem({
       
         <div className="flex flex-col gap-1">
           <Label>Venue</Label>
-          <Select value={editedPub.venue_id.toString()} onValueChange={(value) => handleChange("venue_id", value)}>
+          <Select value={editedPub.venue_id.toString()} onValueChange={(value) => handleChange("venue_id", value)} disabled={!editable}>
                 <SelectTrigger className="w-full bg-white">
                   <SelectValue placeholder="Select venue" />
                 </SelectTrigger>
@@ -232,7 +244,7 @@ function PubAccordionItem({
           <Label htmlFor={`event-link-${pub.id}`}>Event Link</Label>
           <Input
             id={`event-link-${pub.id}`}
-            value={editedPub.fb_link}
+            value={editedPub.fb_link ?? ""}
             disabled={!editable}
             onChange={(e) => handleChange("fb_link", e.target.value)}
             className="bg-white"
@@ -244,13 +256,10 @@ function PubAccordionItem({
   );
 }
 
-const formatURL = (url: string): string => {
-  const trimmedUrl = url.trim();
-  if (trimmedUrl && !/^https?:\/\//i.test(trimmedUrl)) {
-    return `https://${trimmedUrl}`;
-  }
-  return trimmedUrl;
-};
+function formatURL(url?: string | null): string {
+  if (!url || typeof url !== 'string') return '';
+  return url.trim().startsWith('http') ? url : `https://${url.trim()}`;
+}
 
 export default function Page() {
   const [pubs, setpubs] = useState<Pub[]>([]);
@@ -259,7 +268,6 @@ export default function Page() {
   const [event_link, setEventLink] = useState("");
 
   const [eventTitle, setEventTitle] = useState("");
-  const [venue, setVenue] = useState("");
 
   const [venueId, setVenueId] = useState('');
   const [venues, setVenues] = useState<Venue[]>([]);
@@ -346,7 +354,10 @@ export default function Page() {
         if (!response.ok) throw new Error("Failed to fetch pubs");
 
         const data = await response.json();
-        setpubs(data);
+        setpubs(data.map((pub: { fb_link: string; }) => ({
+          ...pub,
+          fb_link: pub.fb_link ?? '',
+        })));
       } catch (error: unknown) {
         if (error instanceof Error) {
           setMessage({ text: error.message, type: "error" });
@@ -419,7 +430,7 @@ export default function Page() {
       );
       return;
     }
-
+    
     const formated_event_link = formatURL(event_link);
 
     const localDate = toZonedTime(date, "Europe/Stockholm");
@@ -436,9 +447,9 @@ export default function Page() {
           body: JSON.stringify({
             title: eventTitle,
             date: formattedDate,
-            event_link: formated_event_link,
+            event_link: formated_event_link === '' ? undefined : formated_event_link,
             location: location,
-            venue: venue,
+            venue_id: venueId,
           }),
         },
       );
@@ -452,7 +463,7 @@ export default function Page() {
       }
 
       const newpub = await response.json();
-      setpubs([...pubs, newpub.pub]);
+      setpubs([...pubs, newpub.event]);
       showMessage("pub added successfully!", "success");
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -468,7 +479,7 @@ export default function Page() {
   const deletePub = async (id: number) => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/pubs/delete${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/events/delete${id}`,
         {
           method: "DELETE",
           credentials: "include",
@@ -496,7 +507,7 @@ export default function Page() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/pubs/update${pub.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/events/update${pub.id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -505,8 +516,8 @@ export default function Page() {
             id: pub.id,
             title: pub.title,
             date: formattedDate,
-            event_link: formatted_event_link,
-            venue: pub.venue_id,
+            event_link: formatted_event_link === '' ? undefined : formatted_event_link,
+            venue_id: pub.venue_id,
           }),
         },
       );
@@ -517,7 +528,7 @@ export default function Page() {
 
       setpubs((prevpubs) =>
         prevpubs.map((d) =>
-          d.id === updatedpub.pub.id ? updatedpub.pub : d,
+          d.id === updatedpub.event.id ? updatedpub.event : d,
         ),
       );
 
@@ -598,7 +609,7 @@ export default function Page() {
               className="flex-1 bg-white text-center font-semibold"
             />
 
-            <div className="w-full flex flex-wrap gap-4">
+            <div className="flex w-full flex-wrap gap-4">
               {/* Venue */}
               <Select value={venueId} onValueChange={setVenueId}>
                 <SelectTrigger className="w-full bg-white sm:w-[30%]">
