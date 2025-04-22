@@ -4,22 +4,23 @@ import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { CalendarIcon, PlusIcon } from "lucide-react";
 import { toZonedTime } from "date-fns-tz";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import {
   SidebarProvider,
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { Trash2, Pencil } from "lucide-react"; // Import icons
+import { Trash2, Pencil, Save } from "lucide-react"; // Import icons
 import {
   Popover,
   PopoverTrigger,
@@ -30,35 +31,247 @@ import { cn } from "@/lib/utils";
 import React from "react";
 import { add, format } from "date-fns";
 import { TimePickerDemo } from "@/components/time-picker-demo";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+
+function DateTimePicker({
+  date,
+  setDate,
+  disabled,
+}: {
+  date: Date | undefined;
+  setDate: (date: Date | undefined) => void;
+  disabled?: boolean;
+}) {
+  const handleSelect = (selectedDate: Date | undefined) => {
+    if (selectedDate) setDate(selectedDate);
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          disabled={disabled}
+          variant="outline"
+          className={cn(
+            "w-full justify-start truncate text-left font-normal",
+            !date && "text-muted-foreground",
+          )}
+        >
+          <CalendarIcon className="mr-2 size-4" />
+          {date ? format(date, "PPP HH:mm:ss") : <span>Pick a date</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={handleSelect}
+          initialFocus
+        />
+        <div className="border-t border-border p-3">
+          <TimePickerDemo setDate={setDate} date={date} />
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 type Pub = {
   id: number;
   title: string;
   date: string;
   auto_created: number;
+  fb_link: string;
+  venue_id: number;
+};
+
+type Venue = {
+  id: number;
+  name: string;
+};
+
+
+function PubAccordionItem({
+  pub,
+  deletePub,
+  updatePub,
+  formatDate,
+  showMessage,
+  venues,
+}: {
+  pub: Pub;
+  venues: Venue[];
+  deletePub: (id: number) => void;
+  updatePub: (pub: Pub) => void;
+  formatDate: (date: string) => string;
+  showMessage: (text: string, type: "success" | "error") => void;
+}) {
+  const [editable, setEditable] = useState(false);
+  const [editedPub, seteditedPub] = useState<Pub>(pub);
+
+  const handleChange = (field: keyof Pub, value: string | number) => {
+    if (field === "date") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (new Date(value) < today) {
+        showMessage("You cannot select a past date", "error");
+        return;
+      }
+    }
+    seteditedPub((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = () => {
+    updatePub(editedPub);
+    setEditable(false);
+  };
+
+  return (
+    <AccordionItem
+  value={`pub-${pub.id}`}
+  className="rounded-lg border bg-muted/50"
+>
+  <div className="flex flex-col items-center gap-2 p-4 sm:relative sm:flex-row sm:justify-between sm:gap-0">
+    {/* Date (left on larger screens) */}
+    <div className="rounded-lg border border-gray-300 bg-gray-200 px-3 py-1 text-lg font-medium text-primary shadow-sm">
+      {formatDate(pub.date)}
+    </div>
+
+    {/* Title - stacked on mobile, centered absolute on desktop */}
+    <div className="text-center text-xl sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:whitespace-nowrap">
+      {pub.title}
+    </div>
+
+    {/* Action Buttons (right on larger screens) */}
+    <div className="flex items-center justify-end gap-2 sm:w-1/4">
+      {editable ? (
+        <Button size="icon" variant="default" onClick={handleSave}>
+          <Save className="size-4" />
+        </Button>
+      ) : (
+        <Button
+          size="icon"
+          variant="outline"
+          onClick={() => setEditable(true)}
+        >
+          <Pencil className="size-4" />
+        </Button>
+      )}
+      <Button
+        size="icon"
+        variant="destructive"
+        onClick={() => {
+          if (
+            confirm(
+              "Are you sure you want to delete this pub? This action cannot be undone.",
+            )
+          ) {
+            deletePub(pub.id);
+          }
+        }}
+      >
+        <Trash2 className="size-4" />
+      </Button>
+    </div>
+  </div>
+
+      {/* Expand Button */}
+      <AccordionTrigger className="w-full border-t px-4 py-2 text-sm font-medium hover:bg-muted">
+        Show details
+      </AccordionTrigger>
+
+  
+
+     <AccordionContent className="grid grid-cols-1 gap-4 border-t px-4 py-3 sm:grid-cols-2">
+             {/* Date Display or Picker */}
+             <div className="flex flex-col gap-1">
+               <Label htmlFor={`title-${pub.id}`}>Date</Label>
+               <DateTimePicker
+                 date={editedPub.date ? new Date(editedPub.date) : undefined}
+                 setDate={(selectedDate) => {
+                   handleChange("date", selectedDate?.toISOString() || "");
+                 }}
+                 disabled={!editable}
+               />
+             </div>
+     
+             <div className="flex flex-col gap-1">
+               <Label htmlFor={`title-${pub.id}`}>Title</Label>
+               <Input
+                 id={`title-${pub.id}`}
+                 value={editedPub.title}
+                 disabled={!editable}
+                 onChange={(e) => handleChange("title", e.target.value)}
+                 className="bg-white"
+               />
+             </div>
+     
+      
+        <div className="flex flex-col gap-1">
+          <Label>Venue</Label>
+          <Select value={editedPub.venue_id.toString()} onValueChange={(value) => handleChange("venue_id", value)}>
+                <SelectTrigger className="w-full bg-white">
+                  <SelectValue placeholder="Select venue" />
+                </SelectTrigger>
+                <SelectContent>
+                  {venues.map((venue) => (
+                    <SelectItem key={venue.id} value={venue.id.toString()}>
+                      {venue.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Label htmlFor={`event-link-${pub.id}`}>Event Link</Label>
+          <Input
+            id={`event-link-${pub.id}`}
+            value={editedPub.fb_link}
+            disabled={!editable}
+            onChange={(e) => handleChange("fb_link", e.target.value)}
+            className="bg-white"
+          />
+        </div>
+
+      </AccordionContent>
+    </AccordionItem>
+  );
+}
+
+const formatURL = (url: string): string => {
+  const trimmedUrl = url.trim();
+  if (trimmedUrl && !/^https?:\/\//i.test(trimmedUrl)) {
+    return `https://${trimmedUrl}`;
+  }
+  return trimmedUrl;
 };
 
 export default function Page() {
-  const [pubs, setPubs] = useState<Pub[]>([]);
-  const [name, setName] = useState("");
+  const [pubs, setpubs] = useState<Pub[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [pubName, setPubName] = useState("");
   const [date, setDate] = React.useState<Date>();
+  const [event_link, setEventLink] = useState("");
+
+  const [eventTitle, setEventTitle] = useState("");
+  const [venue, setVenue] = useState("");
+
+  const [venueId, setVenueId] = useState('');
+  const [venues, setVenues] = useState<Venue[]>([]);
   const [message, setMessage] = useState<{
+
     text: string;
     type: "success" | "error";
   }>();
-  const [editPub, setEditPub] = useState<Pub | undefined>(); // Store selected pub for editing
 
   const showMessage = (text: string, type: "success" | "error") => {
     setMessage({ text, type });
     setTimeout(() => setMessage(undefined), 3000);
-  };
-
-  const openEditDialog = (pub: Pub) => {
-    setEditPub(pub);
-    setName(pub.title);
-    setDate(new Date(pub.date));
   };
 
   const formatDate = (isoString: string) => {
@@ -78,7 +291,6 @@ export default function Page() {
     const formattedDate = new Intl.DateTimeFormat("en-GB", options).format(
       date,
     );
-
     let split = formattedDate.split(" ");
     split = split.filter((word) => word !== "at");
     const [weekday, day, month, time] = split;
@@ -115,10 +327,11 @@ export default function Page() {
     const diff = newDay.getTime() - date.getTime();
     const diffInDays = diff / (1000 * 60 * 60 * 24);
     const newDateFull = add(date, { days: Math.ceil(diffInDays) });
+
     setDate(newDateFull);
   };
 
-  // Fetch Pubs
+  // Fetch pubs
   useEffect(() => {
     async function fetchPubs() {
       try {
@@ -133,7 +346,7 @@ export default function Page() {
         if (!response.ok) throw new Error("Failed to fetch pubs");
 
         const data = await response.json();
-        setPubs(data);
+        setpubs(data);
       } catch (error: unknown) {
         if (error instanceof Error) {
           setMessage({ text: error.message, type: "error" });
@@ -143,17 +356,73 @@ export default function Page() {
       }
     }
     fetchPubs();
+
+    async function fetchVenues() {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/venues`,
+          {
+            method: "GET",
+            credentials: "include",
+          },
+        );
+  
+        if (!response.ok) throw new Error("Failed to fetch venues");
+  
+        const data = await response.json();
+        setVenues(data);
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          setMessage({ text: error.message, type: "error" });
+        } else {
+          setMessage({ text: "An unknown error occurred", type: "error" });
+        }
+      }
+    }
+    fetchVenues();
+
+
+
+    const fetchDefaultVenue = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/users/venue`,
+          { credentials: "include" },
+        );
+
+        if (!response.ok) throw new Error("Failed to fetch default venue");
+
+        const data = await response.json();
+        
+        setVenueId(data.venueId.toString());
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          setMessage({ text: error.message, type: "error" });
+        } else {
+          setMessage({ text: "An unknown error occurred", type: "error" });
+        }
+      }
+    };
+
+    fetchDefaultVenue();
   }, []);
 
-  // Add Pub Handler
-  const addPub = async () => {
-    if (!pubName || !date) {
-      showMessage("Please provide both name and date.", "error");
+  
+
+
+  // Add pub
+  const addpub = async () => {
+    if (!eventTitle || !date) {
+      showMessage(
+        "Please provide at least title and date",
+        "error",
+      );
       return;
     }
 
-    // Convert to local time, adjust to UTC if needed
-    const localDate = toZonedTime(date, "Europe/Stockholm"); // Replace 'Europe/Stockholm' with your time zone
+    const formated_event_link = formatURL(event_link);
+
+    const localDate = toZonedTime(date, "Europe/Stockholm");
     const formattedDate = format(localDate, "yyyy-MM-dd'T'HH:mm:ssXXX");
 
     setIsLoading(true);
@@ -164,20 +433,27 @@ export default function Page() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ title: pubName, date: formattedDate }),
+          body: JSON.stringify({
+            title: eventTitle,
+            date: formattedDate,
+            event_link: formated_event_link,
+            location: location,
+            venue: venue,
+          }),
         },
       );
 
       if (!response.ok) {
         throw new Error(
-          response.status === 409 ? "Pub already exists" : "Failed to add pub",
+          response.status === 409
+            ? "pub already exists"
+            : "Failed to add pub",
         );
       }
 
-      const newPub = await response.json();
-      setPubs([...pubs, newPub.event]); // Update UI
-      setName(""); // Clear input
-      showMessage("Pub added successfully!", "success");
+      const newpub = await response.json();
+      setpubs([...pubs, newpub.pub]);
+      showMessage("pub added successfully!", "success");
     } catch (error: unknown) {
       if (error instanceof Error) {
         setMessage({ text: error.message, type: "error" });
@@ -189,11 +465,10 @@ export default function Page() {
     }
   };
 
-  // Delete Pub Handler
   const deletePub = async (id: number) => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/events/delete${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/pubs/delete${id}`,
         {
           method: "DELETE",
           credentials: "include",
@@ -202,8 +477,8 @@ export default function Page() {
 
       if (!response.ok) throw new Error("Failed to delete pub");
 
-      setPubs(pubs.filter((pub) => pub.id !== id)); // Remove from UI
-      showMessage("Pub deleted successfully!", "success");
+      setpubs(pubs.filter((pub) => pub.id !== id));
+      showMessage("pub deleted successfully!", "success");
     } catch (error: unknown) {
       if (error instanceof Error) {
         setMessage({ text: error.message, type: "error" });
@@ -213,44 +488,40 @@ export default function Page() {
     }
   };
 
-  const updatePub = async () => {
-    if (!editPub) return;
-    if (!name) {
-      showMessage("Add an event name", "error");
-      return;
-    }
-    if (!date) {
-      showMessage("Add a date", "error");
-      return;
-    }
-
-    const localDate = toZonedTime(date, "Europe/Stockholm");
+  const updatePub = async (pub: Pub) => {
+    const localDate = toZonedTime(pub.date, "Europe/Stockholm");
     const formattedDate = format(localDate, "yyyy-MM-dd'T'HH:mm:ssXXX");
+
+    const formatted_event_link = formatURL(pub.fb_link);
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/events/update${editPub.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/pubs/update${pub.id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ title: name, date: formattedDate }),
+          body: JSON.stringify({
+            id: pub.id,
+            title: pub.title,
+            date: formattedDate,
+            event_link: formatted_event_link,
+            venue: pub.venue_id,
+          }),
         },
       );
 
       if (!response.ok) throw new Error("Failed to update pub");
 
-      showMessage("Pub updated successfully!", "success");
+      const updatedpub = await response.json();
 
-      setPubs((prevPubs) =>
-        prevPubs.map((p) =>
-          p.id === editPub.id
-            ? { ...p, title: name, date: date?.toISOString() || p.date }
-            : p,
+      setpubs((prevpubs) =>
+        prevpubs.map((d) =>
+          d.id === updatedpub.pub.id ? updatedpub.pub : d,
         ),
       );
 
-      setEditPub(undefined);
+      showMessage("pub updated successfully!", "success");
     } catch (error: unknown) {
       if (error instanceof Error) {
         setMessage({ text: error.message, type: "error" });
@@ -287,15 +558,14 @@ export default function Page() {
         )}
 
         <div className="p-4">
-          {/* Add Pub Row */}
-          <div className="mb-4 flex w-full max-w-[1200px] items-center gap-4 rounded-lg border bg-secondary p-4 shadow-sm">
+          <div className="mb-4 flex w-full max-w-[1200px] flex-wrap gap-4 rounded-lg border bg-secondary p-4 shadow-sm">
             {/* Date Picker */}
             <Popover>
               <PopoverTrigger asChild>
                 <Button
-                  variant={"outline"}
+                  variant="outline"
                   className={cn(
-                    "w-[30%] justify-start truncate text-left font-normal",
+                    "w-full justify-start truncate text-left font-normal sm:w-[30%]",
                     !date && "text-muted-foreground",
                   )}
                 >
@@ -320,133 +590,70 @@ export default function Page() {
               </PopoverContent>
             </Popover>
 
-            {/* Pub Name Input */}
+            {/* Title Input */}
             <Input
-              placeholder="Enter pub name..."
-              value={pubName}
-              onChange={(e) => setPubName(e.target.value)}
+              placeholder="Enter title..."
+              value={eventTitle}
+              onChange={(e) => setEventTitle(e.target.value)}
               className="flex-1 bg-white text-center font-semibold"
             />
 
-            {/* Plus Button */}
-            <Button variant="default" onClick={addPub}>
-              <PlusIcon className="size-5" />
+            <div className="w-full flex flex-wrap gap-4">
+              {/* Venue */}
+              <Select value={venueId} onValueChange={setVenueId}>
+                <SelectTrigger className="w-full bg-white sm:w-[30%]">
+                  <SelectValue placeholder="Select venue" />
+                </SelectTrigger>
+                <SelectContent>
+                  {venues.map((venue) => (
+                    <SelectItem key={venue.id} value={venue.id.toString()}>
+                      {venue.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Event Link */}
+              <Input
+                placeholder="Enter event link..."
+                value={event_link}
+                onChange={(e) => setEventLink(e.target.value)}
+                className="flex-1 bg-white"
+              />
+            </div>
+
+           
+
+            {/* Submit Button */}
+            <Button variant="default" onClick={addpub} className="w-full">
+              <PlusIcon className="mr-2 size-5" />
+              Add Event
             </Button>
           </div>
 
-          {/* List of Pubs */}
+          {/* List of pubs */}
+
           <div className="mt-4 w-full max-w-[1200px] space-y-2">
             {pubs.length === 0 ? (
               <p className="text-[hsl(var(--muted-foreground))]">
                 No pubs available.
               </p>
             ) : (
-              pubs.map((pub) => (
-                <div
-                  key={pub.id}
-                  className="relative flex flex-col items-center justify-between rounded-lg border bg-muted/50 p-4 sm:flex-row"
-                >
-                  {/* Date */}
-
-                  <div className="rounded-lg border border-gray-300 bg-gray-200 px-3 py-1 text-lg font-medium text-primary shadow-sm">
-                    {formatDate(pub.date)}
-                  </div>
-
-                  {/* Pub Name Centered */}
-                  <div className="font-regular flex flex-col items-center text-center text-xl sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:items-start sm:text-left">
-                    {pub.title}
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="mt-2 flex w-full items-center justify-end gap-2 sm:mt-0 sm:w-1/4">
-                    {pub.auto_created === 1 && (
-                      <span className="border-black-300 flex h-8 items-center rounded-md border bg-green-600 px-2 py-0.5 text-[12px] font-semibold text-white">
-                        System Generated
-                      </span>
-                    )}
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() => openEditDialog(pub)}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                      </DialogTrigger>
-                    </Dialog>
-                    <Button
-                      size="icon"
-                      variant="destructive"
-                      onClick={() => {
-                        if (
-                          globalThis.confirm(
-                            "Are you sure you want to delete this pub? This action cannot be undone.",
-                          )
-                        ) {
-                          deletePub(pub.id);
-                        }
-                      }}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))
+              <Accordion type="single" collapsible className="space-y-2">
+                {pubs.map((pub) => (
+                  <PubAccordionItem
+                    key={pub.id}
+                    pub={pub}
+                    deletePub={deletePub}
+                    updatePub={updatePub}
+                    formatDate={formatDate}
+                    showMessage={showMessage}
+                    venues={venues}
+                  />
+                ))}
+              </Accordion>
             )}
           </div>
-
-          <Dialog
-            open={Boolean(editPub)}
-            onOpenChange={(open) => !open && setEditPub(undefined)}
-          >
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Edit Pub</DialogTitle>
-              </DialogHeader>
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-[70%] justify-start truncate text-left font-normal",
-                      !date && "text-muted-foreground",
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 size-4" />
-                    {date ? (
-                      format(date, "PPP HH:mm:ss")
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={(d) => handleSelect(d)}
-                    initialFocus
-                  />
-                  <div className="border-t border-border p-3">
-                    <TimePickerDemo setDate={setDate} date={date} />
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Pub name"
-                className="mb-2"
-              />
-
-              <Button onClick={updatePub} className="mt-4 w-full">
-                Save Changes
-              </Button>
-            </DialogContent>
-          </Dialog>
         </div>
       </SidebarInset>
     </SidebarProvider>
