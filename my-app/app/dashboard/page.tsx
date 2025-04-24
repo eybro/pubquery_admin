@@ -142,14 +142,11 @@ function PubAccordionItem({
       {formatDate(pub.date)}
     </div>
 
-    {/* Title - stacked on mobile, centered absolute on desktop */}
-    <div className="text-center text-xl sm:absolute sm:left-1/2 sm:-translate-x-1/2 sm:whitespace-nowrap">
+    <div className="break-words text-center text-xl sm:static sm:w-full sm:translate-x-0">
       {pub.title}
     </div>
-
     
 
-    {/* Action Buttons (right on larger screens) */}
     {/* Action Buttons (right on larger screens) */}
 <div className="flex flex-col items-end gap-2 sm:w-1/4">
   <div className="flex items-center gap-2">
