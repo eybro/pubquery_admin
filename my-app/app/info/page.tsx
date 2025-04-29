@@ -6,7 +6,7 @@ import dinner_view from "@/public/images/dinner_view.png";
 import counter from "@/public/images/counter.png";
 import live_count from "@/public/images/live_count.png";
 import pub_view from "@/public/images/pub_view.png";
-import ReactGA from 'react-ga4';
+import ReactGA from "react-ga4";
 import { useEffect } from "react";
 import SignupForm from "@/components/signup-form";
 
@@ -17,7 +17,6 @@ export default function InfoPage() {
   }, []);
 
   return (
-
     <div className="mx-auto max-w-6xl space-y-12 p-6">
       {/* Pub Organizer Section */}
       <section className="text-center">

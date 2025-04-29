@@ -101,9 +101,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const router = useRouter();
   const [error, setError] = useState<string | undefined>();
   const [organizations, setOrganizations] = React.useState<
-  { id: number; name: string }[]
+    { id: number; name: string }[]
   >([]);
-
 
   React.useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`, {
@@ -112,11 +111,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       .then((res) => res.json())
       .then((data) => setUser(data))
       .catch(() =>
-        setUser({ id: 0, username: "Guest", organizationName: "Demo", role: "ORG_ADMIN", organization_id: 0 }),
+        setUser({
+          id: 0,
+          username: "Guest",
+          organizationName: "Demo",
+          role: "ORG_ADMIN",
+          organization_id: 0,
+        }),
       );
-      
   }, []);
-
 
   React.useEffect(() => {
     if (user?.role === "SUPER_ADMIN") {
@@ -174,49 +177,55 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
         {user?.role === "SUPER_ADMIN" && organizations.length > 0 && (
-  <div className="px-4 py-2">
-    <label className="mb-1 block text-sm font-medium text-sidebar-foreground">
-      Switch Organization
-    </label>
-    <select
-      className="w-full rounded-md border border-gray-500 bg-white p-2 text-sm text-black shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
-      value={user.organization_id}
-      onChange={async (e) => {
-        const newOrgId = e.target.value;
+          <div className="px-4 py-2">
+            <label className="mb-1 block text-sm font-medium text-sidebar-foreground">
+              Switch Organization
+            </label>
+            <select
+              className="w-full rounded-md border border-gray-500 bg-white p-2 text-sm text-black shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              value={user.organization_id}
+              onChange={async (e) => {
+                const newOrgId = e.target.value;
 
-        try {
-          const response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/users/switch-organization`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              credentials: "include",
-              body: JSON.stringify({ organization_id: newOrgId }),
-            },
-          );
+                try {
+                  const response = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/users/switch-organization`,
+                    {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      credentials: "include",
+                      body: JSON.stringify({ organization_id: newOrgId }),
+                    },
+                  );
 
-          if (!response.ok) {
-            throw new Error("Failed to update organization");
-          }
+                  if (!response.ok) {
+                    throw new Error("Failed to update organization");
+                  }
 
-          setUser((prev) => prev && { ...prev, organization_id: Number(newOrgId)});
-          globalThis.location.reload();
-        } catch (error) {
-          setError(error instanceof Error ? error.message : "An unknown error occurred");
-        }
-      }}
-    >
-      {organizations.map((org) => (
-        <option key={org.id} value={org.id}>
-          {org.name}
-        </option>
-      ))}
-    </select>
-  </div>
-)}
-
+                  setUser(
+                    (prev) =>
+                      prev && { ...prev, organization_id: Number(newOrgId) },
+                  );
+                  globalThis.location.reload();
+                } catch (error) {
+                  setError(
+                    error instanceof Error
+                      ? error.message
+                      : "An unknown error occurred",
+                  );
+                }
+              }}
+            >
+              {organizations.map((org) => (
+                <option key={org.id} value={org.id}>
+                  {org.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />

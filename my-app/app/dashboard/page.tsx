@@ -95,7 +95,6 @@ type Venue = {
   name: string;
 };
 
-
 function PubAccordionItem({
   pub,
   deletePub,
@@ -133,108 +132,107 @@ function PubAccordionItem({
 
   return (
     <AccordionItem
-  value={`pub-${pub.id}`}
-  className="rounded-lg border bg-muted/50"
->
-  <div className="flex flex-col items-center gap-2 p-4 sm:relative sm:flex-row sm:justify-between sm:gap-0">
-    {/* Date (left on larger screens) */}
-    <div className="rounded-lg border border-gray-300 bg-gray-200 px-3 py-1 text-lg font-medium text-primary shadow-sm">
-      {formatDate(pub.date)}
-    </div>
-
-    <div className="break-words text-center text-xl sm:static sm:w-full sm:translate-x-0">
-      {pub.title}
-    </div>
-    
-
-    {/* Action Buttons (right on larger screens) */}
-<div className="flex flex-col items-end gap-2 sm:w-1/4">
-  <div className="flex items-center gap-2">
-    {editable ? (
-      <Button size="icon" variant="default" onClick={handleSave}>
-        <Save className="size-4" />
-      </Button>
-    ) : (
-      <Button
-        size="icon"
-        variant="outline"
-        onClick={() => setEditable(true)}
-      >
-        <Pencil className="size-4" />
-      </Button>
-    )}
-    <Button
-      size="icon"
-      variant="destructive"
-      onClick={() => {
-        if (
-          confirm(
-            "Are you sure you want to delete this pub? This action cannot be undone.",
-          )
-        ) {
-          deletePub(pub.id);
-        }
-      }}
+      value={`pub-${pub.id}`}
+      className="rounded-lg border bg-muted/50"
     >
-      <Trash2 className="size-4" />
-    </Button>
-  </div>
-  
-  {pub.auto_created === 1 && (
-    <span className="border-black-300 inline-flex h-6 items-center rounded-md border bg-green-600 px-2 py-0.5 text-[12px] font-semibold text-white">
-      System Generated
-    </span>
-  )}
-</div>
+      <div className="flex flex-col items-center gap-2 p-4 sm:relative sm:flex-row sm:justify-between sm:gap-0">
+        {/* Date (left on larger screens) */}
+        <div className="rounded-lg border border-gray-300 bg-gray-200 px-3 py-1 text-lg font-medium text-primary shadow-sm">
+          {formatDate(pub.date)}
+        </div>
 
-  </div>
+        <div className="break-words text-center text-xl sm:static sm:w-full sm:translate-x-0">
+          {pub.title}
+        </div>
+
+        {/* Action Buttons (right on larger screens) */}
+        <div className="flex flex-col items-end gap-2 sm:w-1/4">
+          <div className="flex items-center gap-2">
+            {editable ? (
+              <Button size="icon" variant="default" onClick={handleSave}>
+                <Save className="size-4" />
+              </Button>
+            ) : (
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => setEditable(true)}
+              >
+                <Pencil className="size-4" />
+              </Button>
+            )}
+            <Button
+              size="icon"
+              variant="destructive"
+              onClick={() => {
+                if (
+                  confirm(
+                    "Are you sure you want to delete this pub? This action cannot be undone.",
+                  )
+                ) {
+                  deletePub(pub.id);
+                }
+              }}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
+
+          {pub.auto_created === 1 && (
+            <span className="border-black-300 inline-flex h-6 items-center rounded-md border bg-green-600 px-2 py-0.5 text-[12px] font-semibold text-white">
+              System Generated
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* Expand Button */}
       <AccordionTrigger className="w-full border-t px-4 py-2 text-sm font-medium hover:bg-muted">
         Show details
       </AccordionTrigger>
 
-  
+      <AccordionContent className="grid grid-cols-1 gap-4 border-t px-4 py-3 sm:grid-cols-2">
+        {/* Date Display or Picker */}
+        <div className="flex flex-col gap-1">
+          <Label htmlFor={`title-${pub.id}`}>Date</Label>
+          <DateTimePicker
+            date={editedPub.date ? new Date(editedPub.date) : undefined}
+            setDate={(selectedDate) => {
+              handleChange("date", selectedDate?.toISOString() || "");
+            }}
+            disabled={!editable}
+          />
+        </div>
 
-     <AccordionContent className="grid grid-cols-1 gap-4 border-t px-4 py-3 sm:grid-cols-2">
-             {/* Date Display or Picker */}
-             <div className="flex flex-col gap-1">
-               <Label htmlFor={`title-${pub.id}`}>Date</Label>
-               <DateTimePicker
-                 date={editedPub.date ? new Date(editedPub.date) : undefined}
-                 setDate={(selectedDate) => {
-                   handleChange("date", selectedDate?.toISOString() || "");
-                 }}
-                 disabled={!editable}
-               />
-             </div>
-     
-             <div className="flex flex-col gap-1">
-               <Label htmlFor={`title-${pub.id}`}>Title</Label>
-               <Input
-                 id={`title-${pub.id}`}
-                 value={editedPub.title}
-                 disabled={!editable}
-                 onChange={(e) => handleChange("title", e.target.value)}
-                 className="bg-white"
-               />
-             </div>
-     
-      
+        <div className="flex flex-col gap-1">
+          <Label htmlFor={`title-${pub.id}`}>Title</Label>
+          <Input
+            id={`title-${pub.id}`}
+            value={editedPub.title}
+            disabled={!editable}
+            onChange={(e) => handleChange("title", e.target.value)}
+            className="bg-white"
+          />
+        </div>
+
         <div className="flex flex-col gap-1">
           <Label>Venue</Label>
-          <Select value={editedPub.venue_id.toString()} onValueChange={(value) => handleChange("venue_id", value)} disabled={!editable}>
-                <SelectTrigger className="w-full bg-white">
-                  <SelectValue placeholder="Select venue" />
-                </SelectTrigger>
-                <SelectContent>
-                  {venues.map((venue) => (
-                    <SelectItem key={venue.id} value={venue.id.toString()}>
-                      {venue.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <Select
+            value={editedPub.venue_id.toString()}
+            onValueChange={(value) => handleChange("venue_id", value)}
+            disabled={!editable}
+          >
+            <SelectTrigger className="w-full bg-white">
+              <SelectValue placeholder="Select venue" />
+            </SelectTrigger>
+            <SelectContent>
+              {venues.map((venue) => (
+                <SelectItem key={venue.id} value={venue.id.toString()}>
+                  {venue.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex flex-col gap-1">
@@ -247,15 +245,14 @@ function PubAccordionItem({
             className="bg-white"
           />
         </div>
-
       </AccordionContent>
     </AccordionItem>
   );
 }
 
 function formatURL(url?: string | null): string {
-  if (!url || typeof url !== 'string') return '';
-  return url.trim().startsWith('http') ? url : `https://${url.trim()}`;
+  if (!url || typeof url !== "string") return "";
+  return url.trim().startsWith("http") ? url : `https://${url.trim()}`;
 }
 
 export default function Page() {
@@ -266,10 +263,9 @@ export default function Page() {
 
   const [eventTitle, setEventTitle] = useState("");
 
-  const [venueId, setVenueId] = useState('');
+  const [venueId, setVenueId] = useState("");
   const [venues, setVenues] = useState<Venue[]>([]);
   const [message, setMessage] = useState<{
-
     text: string;
     type: "success" | "error";
   }>();
@@ -351,10 +347,12 @@ export default function Page() {
         if (!response.ok) throw new Error("Failed to fetch pubs");
 
         const data = await response.json();
-        setpubs(data.map((pub: { fb_link: string; }) => ({
-          ...pub,
-          fb_link: pub.fb_link ?? '',
-        })));
+        setpubs(
+          data.map((pub: { fb_link: string }) => ({
+            ...pub,
+            fb_link: pub.fb_link ?? "",
+          })),
+        );
       } catch (error: unknown) {
         if (error instanceof Error) {
           setMessage({ text: error.message, type: "error" });
@@ -374,9 +372,9 @@ export default function Page() {
             credentials: "include",
           },
         );
-  
+
         if (!response.ok) throw new Error("Failed to fetch venues");
-  
+
         const data = await response.json();
         setVenues(data);
       } catch (error: unknown) {
@@ -389,8 +387,6 @@ export default function Page() {
     }
     fetchVenues();
 
-
-
     const fetchDefaultVenue = async () => {
       try {
         const response = await fetch(
@@ -401,7 +397,7 @@ export default function Page() {
         if (!response.ok) throw new Error("Failed to fetch default venue");
 
         const data = await response.json();
-        
+
         setVenueId(data.venueId.toString());
       } catch (error: unknown) {
         if (error instanceof Error) {
@@ -415,19 +411,13 @@ export default function Page() {
     fetchDefaultVenue();
   }, []);
 
-  
-
-
   // Add pub
   const addpub = async () => {
     if (!eventTitle || !date) {
-      showMessage(
-        "Please provide at least title and date",
-        "error",
-      );
+      showMessage("Please provide at least title and date", "error");
       return;
     }
-    
+
     const formated_event_link = formatURL(event_link);
 
     const localDate = toZonedTime(date, "Europe/Stockholm");
@@ -444,7 +434,8 @@ export default function Page() {
           body: JSON.stringify({
             title: eventTitle,
             date: formattedDate,
-            event_link: formated_event_link === '' ? undefined : formated_event_link,
+            event_link:
+              formated_event_link === "" ? undefined : formated_event_link,
             location: location,
             venue_id: venueId,
           }),
@@ -453,9 +444,7 @@ export default function Page() {
 
       if (!response.ok) {
         throw new Error(
-          response.status === 409
-            ? "pub already exists"
-            : "Failed to add pub",
+          response.status === 409 ? "pub already exists" : "Failed to add pub",
         );
       }
 
@@ -513,7 +502,8 @@ export default function Page() {
             id: pub.id,
             title: pub.title,
             date: formattedDate,
-            event_link: formatted_event_link === '' ? undefined : formatted_event_link,
+            event_link:
+              formatted_event_link === "" ? undefined : formatted_event_link,
             venue_id: pub.venue_id,
           }),
         },
@@ -629,8 +619,6 @@ export default function Page() {
                 className="flex-1 bg-white"
               />
             </div>
-
-           
 
             {/* Submit Button */}
             <Button variant="default" onClick={addpub} className="w-full">

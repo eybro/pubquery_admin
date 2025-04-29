@@ -141,8 +141,8 @@ function DinnerAccordionItem({
 
         {/* Center: Dinner Title */}
         <div className="sm:truncate-0 absolute left-1/2 max-w-[30vw] -translate-x-1/2 truncate text-center text-xl sm:max-w-none sm:whitespace-normal">
-        {dinner.title}
-      </div>
+          {dinner.title}
+        </div>
 
         {/* Right: Invisible placeholder to balance layout */}
         <div className="invisible h-8 w-[120px]" />
