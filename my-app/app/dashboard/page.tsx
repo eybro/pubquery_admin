@@ -5,6 +5,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { CalendarIcon, PlusIcon } from "lucide-react";
 import { toZonedTime } from "date-fns-tz";
 import {
@@ -37,6 +38,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Textarea } from "@/components/ui/textarea";
 
 function DateTimePicker({
   date,
@@ -88,6 +90,8 @@ type Pub = {
   auto_created: number;
   fb_link: string;
   venue_id: number;
+  description: string;
+  patches: boolean;
 };
 
 type Venue = {
@@ -112,18 +116,20 @@ function PubAccordionItem({
 }) {
   const [editable, setEditable] = useState(false);
   const [editedPub, seteditedPub] = useState<Pub>(pub);
-
-  const handleChange = (field: keyof Pub, value: string | number) => {
-    if (field === "date") {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (new Date(value) < today) {
-        showMessage("You cannot select a past date", "error");
-        return;
-      }
+  
+  const handleChange = (field: keyof Pub, value: string | number | boolean) => {
+    if (
+      field === "date" &&
+      typeof value === "string" &&
+      new Date(value) < new Date(new Date().setHours(0, 0, 0, 0))
+    ) {
+      showMessage("You cannot select a past date", "error");
+      return;
     }
+  
     seteditedPub((prev) => ({ ...prev, [field]: value }));
   };
+  
 
   const handleSave = () => {
     updatePub(editedPub);
@@ -235,14 +241,46 @@ function PubAccordionItem({
           </Select>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <Label htmlFor={`event-link-${pub.id}`}>Event Link</Label>
-          <Input
-            id={`event-link-${pub.id}`}
-            value={editedPub.fb_link ?? ""}
+        <div className="flex w-full flex-col gap-1 sm:flex-row sm:items-end sm:gap-4">
+          {/* Event Link */}
+          <div className="flex flex-col gap-1 sm:flex-1">
+            <Label htmlFor={`event-link-${pub.id}`}>Event Link</Label>
+            <Input
+              id={`event-link-${pub.id}`}
+              value={editedPub.fb_link ?? ""}
+              disabled={!editable}
+              onChange={(e) => handleChange("fb_link", e.target.value)}
+              className="bg-white"
+            />
+          </div>
+
+          {/* Patches Toggle */}
+          <div className="mt-[22px] flex h-[38px] items-center gap-2 rounded-md border border-input bg-white px-3 py-2 sm:mt-0 sm:h-[38px]">
+            <Label
+              htmlFor="sellPatches"
+              className="text-sm text-muted-foreground"
+            >
+              Patches offered?
+            </Label>
+            <Switch
+              id="sellPatches"
+              checked={editedPub.patches}
+              disabled={!editable}
+              onCheckedChange={(checked) => handleChange("patches", checked)}
+            />
+          </div>
+        </div>
+        {/* Description */}
+        <div className="flex w-full flex-col gap-1 sm:col-span-2">
+          <Textarea
+            placeholder="Enter description..."
+            value={editedPub.description}
             disabled={!editable}
-            onChange={(e) => handleChange("fb_link", e.target.value)}
-            className="bg-white"
+            onChange={(e) =>
+              handleChange("description", e.target.value.slice(0, 2000))
+            }
+            className="w-full bg-white"
+            rows={4}
           />
         </div>
       </AccordionContent>
@@ -258,11 +296,11 @@ function formatURL(url?: string | null): string {
 export default function Page() {
   const [pubs, setpubs] = useState<Pub[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [sellPatches, setSellPatches] = useState(false);
   const [date, setDate] = React.useState<Date>();
   const [event_link, setEventLink] = useState("");
-
   const [eventTitle, setEventTitle] = useState("");
-
+  const [description, setDescription] = useState("");
   const [venueId, setVenueId] = useState("");
   const [venues, setVenues] = useState<Venue[]>([]);
   const [message, setMessage] = useState<{
@@ -438,6 +476,8 @@ export default function Page() {
               formated_event_link === "" ? undefined : formated_event_link,
             location: location,
             venue_id: venueId,
+            description: description,
+            patches: sellPatches,
           }),
         },
       );
@@ -505,6 +545,8 @@ export default function Page() {
             event_link:
               formatted_event_link === "" ? undefined : formatted_event_link,
             venue_id: pub.venue_id,
+            description: pub.description,
+            patches: pub.patches,
           }),
         },
       );
@@ -617,6 +659,31 @@ export default function Page() {
                 value={event_link}
                 onChange={(e) => setEventLink(e.target.value)}
                 className="flex-1 bg-white"
+              />
+              {/* Sell Patches Toggle */}
+              <div className="flex items-center gap-2 rounded-md border border-input bg-white px-3 py-2">
+                <Label
+                  htmlFor="sellPatches"
+                  className="text-sm text-muted-foreground"
+                >
+                  Patches offered?
+                </Label>
+                <Switch
+                  id="sellPatches"
+                  checked={sellPatches}
+                  onCheckedChange={setSellPatches}
+                />
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="flex w-full flex-col gap-1 sm:col-span-2">
+              <Textarea
+                placeholder="Enter description..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value.slice(0, 2000))}
+                className="w-full bg-white"
+                rows={4}
               />
             </div>
 

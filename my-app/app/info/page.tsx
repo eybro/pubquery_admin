@@ -25,7 +25,7 @@ export default function InfoPage() {
         </h2>
         <p className="mb-8 text-lg text-gray-600">
           Lägg upp era pubar och sittningar eller redigera pubar som lagts upp
-          automatiskt. Nå ut till över 10 000 besökare i månaden!
+          automatiskt. Nå ut till över 15 000 besökare i månaden!
         </p>
         <div className="grid grid-cols-1 justify-center gap-6 md:grid-cols-2">
           <div className="flex aspect-[4/3] w-full max-w-lg flex-col items-center rounded-lg bg-white p-6 shadow-lg">
