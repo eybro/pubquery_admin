@@ -20,6 +20,9 @@ type Profile = {
   fb_page: string;
   venueName: string;
   display_name: string;
+  beer_price?: number; 
+  cider_price?: number;
+  drink_price?: number;
 };
 
 export default function Page() {
@@ -28,6 +31,9 @@ export default function Page() {
   const [error] = useState("");
   const [saving, setSaving] = useState(false);
   const [displayName, setDisplayName] = useState("");
+  const [beerPrice, setBeerPrice] = useState<number | ''>('');
+  const [ciderPrice, setCiderPrice] = useState<number | ''>('');
+  const [drinkPrice, setDrinkPrice] = useState<number | ''>('');
   const [message, setMessage] = useState<{
     text: string;
     type: "success" | "error";
@@ -50,6 +56,9 @@ export default function Page() {
 
         const data = await response.json();
         setProfile(data);
+        setBeerPrice(data.beer_price ?? '');
+        setCiderPrice(data.cider_price ?? '');
+        setDrinkPrice(data.drink_price ?? '');
         setDisplayName(data.display_name || "");
       } catch {
         showMessage("Profile could not be fetched", "error");
@@ -89,6 +98,35 @@ export default function Page() {
       setSaving(false);
     }
   };
+
+
+  const handleSavePrices = async () => {
+  setSaving(true);
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/organizations/prices`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          beer_price: beerPrice === '' ? undefined : Number(beerPrice),
+          cider_price: ciderPrice === '' ? undefined : Number(ciderPrice),
+          drink_price: drinkPrice === '' ? undefined : Number(drinkPrice),
+        }),
+      }
+    );
+
+    if (!response.ok) throw new Error("Failed to update prices");
+
+    showMessage("Prices updated", "success");
+  } catch {
+    showMessage("Prices could not be updated", "error");
+  } finally {
+    setSaving(false);
+  }
+};
+
 
   return (
     <SidebarProvider>
@@ -167,8 +205,54 @@ export default function Page() {
                       </div>
                     </div>
 
-                    <Separator />
-
+                 <Separator />
+<div>
+  <label className="mb-1 block text-sm font-medium">Drink Prices (kr)</label>
+  <div className="flex gap-x-4">
+    <div>
+      <span className="mb-1 block text-xs text-muted-foreground">Beer</span>
+      <Input
+        type="number"
+        value={beerPrice}
+        onChange={e => setBeerPrice(e.target.value === '' ? '' : Number.parseInt(e.target.value))}
+        placeholder="kr"
+        min={0}
+        className="w-24"
+        aria-label="Beer Price"
+      />
+    </div>
+    <div>
+      <span className="mb-1 block text-xs text-muted-foreground">Cider</span>
+      <Input
+        type="number"
+        value={ciderPrice}
+        onChange={e => setCiderPrice(e.target.value === '' ? '' : Number.parseInt(e.target.value))}
+        placeholder="kr"
+        min={0}
+        className="w-24"
+        aria-label="Cider Price"
+      />
+    </div>
+    <div>
+      <span className="mb-1 block text-xs text-muted-foreground">Drink</span>
+      <Input
+        type="number"
+        value={drinkPrice}
+        onChange={e => setDrinkPrice(e.target.value === '' ? '' : Number.parseInt(e.target.value))}
+        placeholder="kr"
+        min={0}
+        className="w-24"
+        aria-label="Drink Price"
+      />
+    </div>
+    <div className="flex items-end">
+      <Button onClick={handleSavePrices} disabled={saving}>
+        {saving ? "Saving..." : "Update Prices"}
+      </Button>
+    </div>
+  </div>
+</div>
+<Separator />
                     <p className="text-sm text-muted-foreground">
                       Please contact{" "}
                       <a
