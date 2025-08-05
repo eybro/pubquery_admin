@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  images: {
+    domains: [
+      "pubquery-images.fra1.digitaloceanspaces.com", // ← add your DO Spaces bucket here
+    ],
+  },
   /* config options here */
   async headers() {
     return [
@@ -13,6 +18,7 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      
     ];
   },
 };

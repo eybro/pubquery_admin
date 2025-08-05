@@ -116,7 +116,7 @@ function PubAccordionItem({
 }) {
   const [editable, setEditable] = useState(false);
   const [editedPub, seteditedPub] = useState<Pub>(pub);
-  
+
   const handleChange = (field: keyof Pub, value: string | number | boolean) => {
     if (
       field === "date" &&
@@ -126,10 +126,9 @@ function PubAccordionItem({
       showMessage("You cannot select a past date", "error");
       return;
     }
-  
+
     seteditedPub((prev) => ({ ...prev, [field]: value }));
   };
-  
 
   const handleSave = () => {
     updatePub(editedPub);

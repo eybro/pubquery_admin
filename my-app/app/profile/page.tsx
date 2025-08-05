@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   SidebarTrigger,
   SidebarInset,
@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 type Profile = {
   organizationName: string;
@@ -20,7 +21,7 @@ type Profile = {
   fb_page: string;
   venueName: string;
   display_name: string;
-  beer_price?: number; 
+  beer_price?: number;
   cider_price?: number;
   drink_price?: number;
 };
@@ -31,9 +32,12 @@ export default function Page() {
   const [error] = useState("");
   const [saving, setSaving] = useState(false);
   const [displayName, setDisplayName] = useState("");
-  const [beerPrice, setBeerPrice] = useState<number | ''>('');
-  const [ciderPrice, setCiderPrice] = useState<number | ''>('');
-  const [drinkPrice, setDrinkPrice] = useState<number | ''>('');
+  const [beerPrice, setBeerPrice] = useState<number | "">("");
+  const [ciderPrice, setCiderPrice] = useState<number | "">("");
+  const [drinkPrice, setDrinkPrice] = useState<number | "">("");
+  const [logoUrl, setLogoUrl] = useState<string | undefined>();
+  const [logoUploading, setLogoUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [message, setMessage] = useState<{
     text: string;
     type: "success" | "error";
@@ -56,9 +60,10 @@ export default function Page() {
 
         const data = await response.json();
         setProfile(data);
-        setBeerPrice(data.beer_price ?? '');
-        setCiderPrice(data.cider_price ?? '');
-        setDrinkPrice(data.drink_price ?? '');
+        setLogoUrl(data.logo_url);
+        setBeerPrice(data.beer_price ?? "");
+        setCiderPrice(data.cider_price ?? "");
+        setDrinkPrice(data.drink_price ?? "");
         setDisplayName(data.display_name || "");
       } catch {
         showMessage("Profile could not be fetched", "error");
@@ -99,34 +104,57 @@ export default function Page() {
     }
   };
 
-
   const handleSavePrices = async () => {
-  setSaving(true);
-  try {
+    setSaving(true);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/organizations/prices`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            beer_price: beerPrice === "" ? undefined : Number(beerPrice),
+            cider_price: ciderPrice === "" ? undefined : Number(ciderPrice),
+            drink_price: drinkPrice === "" ? undefined : Number(drinkPrice),
+          }),
+        },
+      );
+
+      if (!response.ok) throw new Error("Failed to update prices");
+
+      showMessage("Prices updated", "success");
+    } catch {
+      showMessage("Prices could not be updated", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoUploading(true);
+    const formData = new FormData();
+    formData.append("logo", file);
+
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/organizations/prices`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/organizations/updateLogo`,
       {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        method: "POST",
         credentials: "include",
-        body: JSON.stringify({
-          beer_price: beerPrice === '' ? undefined : Number(beerPrice),
-          cider_price: ciderPrice === '' ? undefined : Number(ciderPrice),
-          drink_price: drinkPrice === '' ? undefined : Number(drinkPrice),
-        }),
-      }
+        body: formData,
+      },
     );
-
-    if (!response.ok) throw new Error("Failed to update prices");
-
-    showMessage("Prices updated", "success");
-  } catch {
-    showMessage("Prices could not be updated", "error");
-  } finally {
-    setSaving(false);
-  }
-};
-
+    if (response.ok) {
+      const { logo_url } = await response.json();
+      setLogoUrl(logo_url);
+      showMessage("Logo uploaded!", "success");
+    } else {
+      showMessage("Logo upload failed", "error");
+    }
+    setLogoUploading(false);
+  };
 
   return (
     <SidebarProvider>
@@ -191,7 +219,48 @@ export default function Page() {
 
                     <div>
                       <label className="mb-1 block text-sm font-medium">
-                        Display Name
+                        Organization Logo
+                      </label>
+                      <div className="mb-4 flex w-full items-center justify-between">
+                        <div className="flex flex-1">
+                          <div className="ml-6">
+                            {logoUrl && (
+                              <Image
+                                src={logoUrl}
+                                alt="Logo preview"
+                                width={64}
+                                height={64}
+                                className="rounded-full border bg-white object-contain"
+                                style={{ width: "64px", height: "64px" }} // For fixed size (size-16 = 64px)
+                              />
+                            )}
+                            <input
+                              ref={fileInputRef}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={handleLogoChange}
+                              disabled={logoUploading}
+                            />
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={logoUploading}
+                        >
+                          {logoUploading
+                            ? "Uploading..."
+                            : "Upload/Change Logo"}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">
+                        Display Name (This is shown on pubquery.se)
                       </label>
                       <div className="flex gap-x-2">
                         <Input
@@ -205,54 +274,88 @@ export default function Page() {
                       </div>
                     </div>
 
-                 <Separator />
-<div>
-  <label className="mb-1 block text-sm font-medium">Drink Prices (kr)</label>
-  <div className="flex gap-x-4">
-    <div>
-      <span className="mb-1 block text-xs text-muted-foreground">Beer</span>
-      <Input
-        type="number"
-        value={beerPrice}
-        onChange={e => setBeerPrice(e.target.value === '' ? '' : Number.parseInt(e.target.value))}
-        placeholder="kr"
-        min={0}
-        className="w-24"
-        aria-label="Beer Price"
-      />
-    </div>
-    <div>
-      <span className="mb-1 block text-xs text-muted-foreground">Cider</span>
-      <Input
-        type="number"
-        value={ciderPrice}
-        onChange={e => setCiderPrice(e.target.value === '' ? '' : Number.parseInt(e.target.value))}
-        placeholder="kr"
-        min={0}
-        className="w-24"
-        aria-label="Cider Price"
-      />
-    </div>
-    <div>
-      <span className="mb-1 block text-xs text-muted-foreground">Drink</span>
-      <Input
-        type="number"
-        value={drinkPrice}
-        onChange={e => setDrinkPrice(e.target.value === '' ? '' : Number.parseInt(e.target.value))}
-        placeholder="kr"
-        min={0}
-        className="w-24"
-        aria-label="Drink Price"
-      />
-    </div>
-    <div className="flex items-end">
-      <Button onClick={handleSavePrices} disabled={saving}>
-        {saving ? "Saving..." : "Update Prices"}
-      </Button>
-    </div>
-  </div>
-</div>
-<Separator />
+                    <Separator />
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">
+                        Drink Prices (kr)
+                      </label>
+                      <div className="flex w-full items-end justify-between gap-x-4">
+                        {/* Inputs group */}
+                        <div className="flex gap-x-4">
+                          <div>
+                            <span className="mb-1 block text-xs text-muted-foreground">
+                              Beer
+                            </span>
+                            <Input
+                              type="number"
+                              value={beerPrice}
+                              onChange={(e) =>
+                                setBeerPrice(
+                                  e.target.value === ""
+                                    ? ""
+                                    : Number.parseInt(e.target.value),
+                                )
+                              }
+                              placeholder="kr"
+                              min={0}
+                              className="w-24"
+                              aria-label="Beer Price"
+                            />
+                          </div>
+                          <div>
+                            <span className="mb-1 block text-xs text-muted-foreground">
+                              Cider
+                            </span>
+                            <Input
+                              type="number"
+                              value={ciderPrice}
+                              onChange={(e) =>
+                                setCiderPrice(
+                                  e.target.value === ""
+                                    ? ""
+                                    : Number.parseInt(e.target.value),
+                                )
+                              }
+                              placeholder="kr"
+                              min={0}
+                              className="w-24"
+                              aria-label="Cider Price"
+                            />
+                          </div>
+                          <div>
+                            <span className="mb-1 block text-xs text-muted-foreground">
+                              Drink
+                            </span>
+                            <Input
+                              type="number"
+                              value={drinkPrice}
+                              onChange={(e) =>
+                                setDrinkPrice(
+                                  e.target.value === ""
+                                    ? ""
+                                    : Number.parseInt(e.target.value),
+                                )
+                              }
+                              placeholder="kr"
+                              min={0}
+                              className="w-24"
+                              aria-label="Drink Price"
+                            />
+                          </div>
+                        </div>
+                        {/* Button on the right */}
+                        <Button
+                          onClick={handleSavePrices}
+                          disabled={saving}
+                          className="whitespace-nowrap"
+                        >
+                          {saving ? "Saving..." : "Update Prices"}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <Separator />
+
                     <p className="text-sm text-muted-foreground">
                       Please contact{" "}
                       <a
