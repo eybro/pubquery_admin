@@ -89,20 +89,27 @@ type Dinner = {
   signup_link: string;
   description: string;
   event_link: string;
-  location: string;
+  venue_id: number;
   allowed_guests: string;
   price_without_alcohol: number;
   price_with_alcohol: number;
 };
 
+type Venue = {
+  id: number;
+  name: string;
+};
+
 function DinnerAccordionItem({
   dinner,
+  venues,
   deleteDinner,
   updateDinner,
   formatDate,
   showMessage,
 }: {
   dinner: Dinner;
+  venues: Venue[];
   deleteDinner: (id: number) => void;
   updateDinner: (dinner: Dinner) => void;
   formatDate: (date: string) => string;
@@ -212,15 +219,24 @@ function DinnerAccordionItem({
         </div>
 
         <div className="flex flex-col gap-1">
-          <Label htmlFor={`location-${dinner.id}`}>Location</Label>
-          <Input
-            id={`location-${dinner.id}`}
-            value={editedDinner.location}
-            disabled={!editable}
-            onChange={(e) => handleChange("location", e.target.value)}
-            className="bg-white"
-          />
-        </div>
+  <Label>Venue</Label>
+  <Select
+    value={editedDinner.venue_id?.toString() || ""}
+    onValueChange={(value) => handleChange("venue_id", Number(value))}
+    disabled={!editable}
+  >
+    <SelectTrigger className="w-full bg-white">
+      <SelectValue placeholder="Select venue" />
+    </SelectTrigger>
+    <SelectContent className="h-[250px] overflow-y-auto">
+      {venues.map((venue) => (
+        <SelectItem key={venue.id} value={venue.id.toString()}>
+          {venue.name}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
 
         <div className="flex flex-col gap-1">
           <Label>Allowed Guests</Label>
@@ -331,7 +347,8 @@ export default function Page() {
   const [eventTitle, setEventTitle] = useState("");
   const [description, setDescription] = useState("");
   const [signupLink, setSignupLink] = useState("");
-  const [location, setLocation] = useState("");
+  const [venueId, setVenueId] = useState("");
+  const [venues, setVenues] = useState<Venue[]>([]);
   const [allowedGuests, setAllowedGuests] = useState("");
   const [priceWithoutAlcohol, setPriceWithoutAlcohol] = useState("");
   const [priceWithAlcohol, setPriceWithAlcohol] = useState("");
@@ -430,6 +447,47 @@ export default function Page() {
     fetchDinners();
   }, []);
 
+  useEffect(() => {
+  async function fetchVenues() {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/venues`,
+        { method: "GET", credentials: "include" }
+      );
+      if (!response.ok) throw new Error("Failed to fetch venues");
+      const data = await response.json();
+      setVenues(data);
+    } catch {
+      setMessage({ text: "Could not fetch venues", type: "error" });
+    }
+  }
+  fetchVenues();
+}, []);
+useEffect(() => {
+ const fetchDefaultVenue = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/users/venue`,
+          { credentials: "include" },
+        );
+
+        if (!response.ok) throw new Error("Failed to fetch default venue");
+
+        const data = await response.json();
+
+        setVenueId(data.venueId.toString());
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          setMessage({ text: error.message, type: "error" });
+        } else {
+          setMessage({ text: "An unknown error occurred", type: "error" });
+        }
+      }
+    };
+
+    fetchDefaultVenue();
+  }, []);
+
   // Add Dinner
   const addDinner = async () => {
     if (!eventTitle || !date || !allowedGuests) {
@@ -460,7 +518,7 @@ export default function Page() {
             description: description,
             signup_link: formated_singup_link,
             event_link: formated_event_link,
-            location: location,
+            venue_id: venueId,
             allowed_guests: allowedGuests,
             price_without_alcohol: priceWithoutAlcohol,
             price_with_alcohol: priceWithAlcohol,
@@ -534,7 +592,7 @@ export default function Page() {
             description: dinner.description,
             signup_link: formatted_singup_link,
             event_link: formatted_event_link,
-            location: dinner.location,
+            venue_id: dinner.venue_id,
             allowed_guests: dinner.allowed_guests,
             price_without_alcohol: dinner.price_without_alcohol,
             price_with_alcohol: dinner.price_with_alcohol,
@@ -654,13 +712,20 @@ export default function Page() {
               className="w-full bg-white"
             />
 
-            {/* Location Input */}
-            <Input
-              placeholder="Enter location..."
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="w-full bg-white sm:w-[48%]"
-            />
+            {/* Venue Dropdown */}
+          <Select value={venueId} onValueChange={setVenueId}>
+            <SelectTrigger className="w-full bg-white sm:w-[48%]">
+              <SelectValue placeholder="Select venue" />
+            </SelectTrigger>
+            <SelectContent className="h-[250px] overflow-y-auto">
+              {venues.map((venue) => (
+                <SelectItem key={venue.id} value={venue.id.toString()}>
+                  {venue.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
 
             {/* Allowed Guests Dropdown */}
             <Select value={allowedGuests} onValueChange={setAllowedGuests}>
@@ -722,6 +787,7 @@ export default function Page() {
                     updateDinner={updateDinner}
                     formatDate={formatDate}
                     showMessage={showMessage}
+                    venues={venues}
                   />
                 ))}
               </Accordion>
