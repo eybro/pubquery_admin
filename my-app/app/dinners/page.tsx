@@ -39,6 +39,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
+
 function DateTimePicker({
   date,
   setDate,
@@ -93,6 +94,7 @@ type Dinner = {
   allowed_guests: string;
   price_without_alcohol: number;
   price_with_alcohol: number;
+  signup_date: string;
 };
 
 type Venue = {
@@ -206,6 +208,17 @@ function DinnerAccordionItem({
             disabled={!editable}
           />
         </div>
+
+        <div className="flex flex-col gap-1">
+  <Label htmlFor={`signup-date-${dinner.id}`}>Signup Date</Label>
+  <DateTimePicker
+    date={editedDinner.signup_date ? new Date(editedDinner.signup_date) : undefined}
+    setDate={(selectedDate) =>
+      handleChange("signup_date", selectedDate ? selectedDate.toISOString() : "")
+    }
+    disabled={!editable}
+  />
+</div>
 
         <div className="flex flex-col gap-1">
           <Label htmlFor={`title-${dinner.id}`}>Title</Label>
@@ -352,6 +365,7 @@ export default function Page() {
   const [allowedGuests, setAllowedGuests] = useState("");
   const [priceWithoutAlcohol, setPriceWithoutAlcohol] = useState("");
   const [priceWithAlcohol, setPriceWithAlcohol] = useState("");
+  const [signupDate, setSignupDate] = useState<Date | undefined>();
 
   const [message, setMessage] = useState<{
     text: string;
@@ -504,6 +518,9 @@ useEffect(() => {
     const localDate = toZonedTime(date, "Europe/Stockholm");
     const formattedDate = format(localDate, "yyyy-MM-dd'T'HH:mm:ssXXX");
 
+    const localSignupDate = signupDate ? toZonedTime(signupDate, "Europe/Stockholm") : undefined;
+    const formattedSignupDate = localSignupDate ? format(localSignupDate, "yyyy-MM-dd'T'HH:mm:ssXXX") : undefined;
+
     setIsLoading(true);
     try {
       const response = await fetch(
@@ -522,6 +539,7 @@ useEffect(() => {
             allowed_guests: allowedGuests,
             price_without_alcohol: priceWithoutAlcohol,
             price_with_alcohol: priceWithAlcohol,
+            signup_date: formattedSignupDate,
           }),
         },
       );
@@ -578,6 +596,9 @@ useEffect(() => {
     const formatted_singup_link = formatURL(dinner.signup_link);
     const formatted_event_link = formatURL(dinner.event_link);
 
+    const localSignupDate = dinner.signup_date ? toZonedTime(dinner.signup_date, "Europe/Stockholm") : undefined;
+    const formattedSignupDate = localSignupDate ? format(localSignupDate, "yyyy-MM-dd'T'HH:mm:ssXXX") : undefined;
+
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/dinners/update${dinner.id}`,
@@ -596,6 +617,7 @@ useEffect(() => {
             allowed_guests: dinner.allowed_guests,
             price_without_alcohol: dinner.price_without_alcohol,
             price_with_alcohol: dinner.price_with_alcohol,
+            signup_date: formattedSignupDate,
           }),
         },
       );
@@ -678,6 +700,32 @@ useEffect(() => {
                 </div>
               </PopoverContent>
             </Popover>
+
+            <Popover>
+  <PopoverTrigger asChild>
+    <Button
+      variant="outline"
+      className={cn(
+        "w-full justify-start truncate text-left font-normal sm:w-[30%]",
+        !signupDate && "text-muted-foreground",
+      )}
+    >
+      <CalendarIcon className="mr-2 size-4" />
+      {signupDate ? format(signupDate, "PPP HH:mm:ss") : <span>Signup until</span>}
+    </Button>
+  </PopoverTrigger>
+  <PopoverContent className="w-auto p-0">
+    <Calendar
+      mode="single"
+      selected={signupDate}
+      onSelect={setSignupDate}
+      initialFocus
+    />
+    <div className="border-t border-border p-3">
+      <TimePickerDemo setDate={setSignupDate} date={signupDate} />
+    </div>
+  </PopoverContent>
+</Popover>
 
             {/* Title Input */}
             <Input
