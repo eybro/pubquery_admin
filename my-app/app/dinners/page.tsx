@@ -39,7 +39,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
-
 function DateTimePicker({
   date,
   setDate,
@@ -210,15 +209,22 @@ function DinnerAccordionItem({
         </div>
 
         <div className="flex flex-col gap-1">
-  <Label htmlFor={`signup-date-${dinner.id}`}>Signup Date</Label>
-  <DateTimePicker
-    date={editedDinner.signup_date ? new Date(editedDinner.signup_date) : undefined}
-    setDate={(selectedDate) =>
-      handleChange("signup_date", selectedDate ? selectedDate.toISOString() : "")
-    }
-    disabled={!editable}
-  />
-</div>
+          <Label htmlFor={`signup-date-${dinner.id}`}>Signup Date</Label>
+          <DateTimePicker
+            date={
+              editedDinner.signup_date
+                ? new Date(editedDinner.signup_date)
+                : undefined
+            }
+            setDate={(selectedDate) =>
+              handleChange(
+                "signup_date",
+                selectedDate ? selectedDate.toISOString() : "",
+              )
+            }
+            disabled={!editable}
+          />
+        </div>
 
         <div className="flex flex-col gap-1">
           <Label htmlFor={`title-${dinner.id}`}>Title</Label>
@@ -232,24 +238,24 @@ function DinnerAccordionItem({
         </div>
 
         <div className="flex flex-col gap-1">
-  <Label>Venue</Label>
-  <Select
-    value={editedDinner.venue_id?.toString() || ""}
-    onValueChange={(value) => handleChange("venue_id", Number(value))}
-    disabled={!editable}
-  >
-    <SelectTrigger className="w-full bg-white">
-      <SelectValue placeholder="Select venue" />
-    </SelectTrigger>
-    <SelectContent className="h-[250px] overflow-y-auto">
-      {venues.map((venue) => (
-        <SelectItem key={venue.id} value={venue.id.toString()}>
-          {venue.name}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-</div>
+          <Label>Venue</Label>
+          <Select
+            value={editedDinner.venue_id?.toString() || ""}
+            onValueChange={(value) => handleChange("venue_id", Number(value))}
+            disabled={!editable}
+          >
+            <SelectTrigger className="w-full bg-white">
+              <SelectValue placeholder="Select venue" />
+            </SelectTrigger>
+            <SelectContent className="h-[250px] overflow-y-auto">
+              {venues.map((venue) => (
+                <SelectItem key={venue.id} value={venue.id.toString()}>
+                  {venue.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         <div className="flex flex-col gap-1">
           <Label>Allowed Guests</Label>
@@ -462,23 +468,23 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
-  async function fetchVenues() {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/venues`,
-        { method: "GET", credentials: "include" }
-      );
-      if (!response.ok) throw new Error("Failed to fetch venues");
-      const data = await response.json();
-      setVenues(data);
-    } catch {
-      setMessage({ text: "Could not fetch venues", type: "error" });
+    async function fetchVenues() {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/venues`,
+          { method: "GET", credentials: "include" },
+        );
+        if (!response.ok) throw new Error("Failed to fetch venues");
+        const data = await response.json();
+        setVenues(data);
+      } catch {
+        setMessage({ text: "Could not fetch venues", type: "error" });
+      }
     }
-  }
-  fetchVenues();
-}, []);
-useEffect(() => {
- const fetchDefaultVenue = async () => {
+    fetchVenues();
+  }, []);
+  useEffect(() => {
+    const fetchDefaultVenue = async () => {
       try {
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/api/users/venue`,
@@ -518,8 +524,12 @@ useEffect(() => {
     const localDate = toZonedTime(date, "Europe/Stockholm");
     const formattedDate = format(localDate, "yyyy-MM-dd'T'HH:mm:ssXXX");
 
-    const localSignupDate = signupDate ? toZonedTime(signupDate, "Europe/Stockholm") : undefined;
-    const formattedSignupDate = localSignupDate ? format(localSignupDate, "yyyy-MM-dd'T'HH:mm:ssXXX") : undefined;
+    const localSignupDate = signupDate
+      ? toZonedTime(signupDate, "Europe/Stockholm")
+      : undefined;
+    const formattedSignupDate = localSignupDate
+      ? format(localSignupDate, "yyyy-MM-dd'T'HH:mm:ssXXX")
+      : undefined;
 
     setIsLoading(true);
     try {
@@ -596,8 +606,12 @@ useEffect(() => {
     const formatted_singup_link = formatURL(dinner.signup_link);
     const formatted_event_link = formatURL(dinner.event_link);
 
-    const localSignupDate = dinner.signup_date ? toZonedTime(dinner.signup_date, "Europe/Stockholm") : undefined;
-    const formattedSignupDate = localSignupDate ? format(localSignupDate, "yyyy-MM-dd'T'HH:mm:ssXXX") : undefined;
+    const localSignupDate = dinner.signup_date
+      ? toZonedTime(dinner.signup_date, "Europe/Stockholm")
+      : undefined;
+    const formattedSignupDate = localSignupDate
+      ? format(localSignupDate, "yyyy-MM-dd'T'HH:mm:ssXXX")
+      : undefined;
 
     try {
       const response = await fetch(
@@ -702,30 +716,34 @@ useEffect(() => {
             </Popover>
 
             <Popover>
-  <PopoverTrigger asChild>
-    <Button
-      variant="outline"
-      className={cn(
-        "w-full justify-start truncate text-left font-normal sm:w-[30%]",
-        !signupDate && "text-muted-foreground",
-      )}
-    >
-      <CalendarIcon className="mr-2 size-4" />
-      {signupDate ? format(signupDate, "PPP HH:mm:ss") : <span>Signup until</span>}
-    </Button>
-  </PopoverTrigger>
-  <PopoverContent className="w-auto p-0">
-    <Calendar
-      mode="single"
-      selected={signupDate}
-      onSelect={setSignupDate}
-      initialFocus
-    />
-    <div className="border-t border-border p-3">
-      <TimePickerDemo setDate={setSignupDate} date={signupDate} />
-    </div>
-  </PopoverContent>
-</Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start truncate text-left font-normal sm:w-[30%]",
+                    !signupDate && "text-muted-foreground",
+                  )}
+                >
+                  <CalendarIcon className="mr-2 size-4" />
+                  {signupDate ? (
+                    format(signupDate, "PPP HH:mm:ss")
+                  ) : (
+                    <span>Signup until</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={signupDate}
+                  onSelect={setSignupDate}
+                  initialFocus
+                />
+                <div className="border-t border-border p-3">
+                  <TimePickerDemo setDate={setSignupDate} date={signupDate} />
+                </div>
+              </PopoverContent>
+            </Popover>
 
             {/* Title Input */}
             <Input
@@ -761,19 +779,18 @@ useEffect(() => {
             />
 
             {/* Venue Dropdown */}
-          <Select value={venueId} onValueChange={setVenueId}>
-            <SelectTrigger className="w-full bg-white sm:w-[48%]">
-              <SelectValue placeholder="Select venue" />
-            </SelectTrigger>
-            <SelectContent className="h-[250px] overflow-y-auto">
-              {venues.map((venue) => (
-                <SelectItem key={venue.id} value={venue.id.toString()}>
-                  {venue.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
+            <Select value={venueId} onValueChange={setVenueId}>
+              <SelectTrigger className="w-full bg-white sm:w-[48%]">
+                <SelectValue placeholder="Select venue" />
+              </SelectTrigger>
+              <SelectContent className="h-[250px] overflow-y-auto">
+                {venues.map((venue) => (
+                  <SelectItem key={venue.id} value={venue.id.toString()}>
+                    {venue.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             {/* Allowed Guests Dropdown */}
             <Select value={allowedGuests} onValueChange={setAllowedGuests}>
