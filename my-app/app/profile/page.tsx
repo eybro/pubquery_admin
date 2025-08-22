@@ -81,7 +81,7 @@ export default function Page() {
     setSaving(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/users/display-name`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/organizations/updateDisplayName`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
