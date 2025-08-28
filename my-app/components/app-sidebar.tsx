@@ -7,10 +7,11 @@ import {
   User,
   PartyPopper,
   CircleUserRound,
+  Activity,            // ⬅️ add this
 } from "lucide-react";
 
-import { LogOut } from "lucide-react"; // Import the LogOut icon from lucide
-import { Button } from "@/components/ui/button"; // ShadCN UI Button component
+import { LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { NavMain } from "@/components/nav-main";
 import {
   Sidebar,
@@ -21,7 +22,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { useRouter } from "next/navigation"; // For redirecting after logout
+import { useRouter } from "next/navigation";
 
 const data = {
   user: {
@@ -37,52 +38,28 @@ const data = {
       icon: Beer,
       isActive: true,
       items: [
-        {
-          title: "Upcoming Pubs",
-          url: "/dashboard",
-        },
-        {
-          title: "Past Pubs",
-          url: "/dashboard/history",
-        },
-        {
-          title: "Menu",
-          url: "/dashboard/menu",
-        },
+        { title: "Upcoming Pubs", url: "/dashboard" },
+        { title: "Past Pubs", url: "/dashboard/history" },
+        { title: "Menu", url: "/dashboard/menu" },
       ],
     },
     {
       title: "Dinners",
       url: "/dinners",
       icon: PartyPopper,
-      items: [
-        {
-          title: "Upcoming Dinners",
-          url: "/dinners",
-        },
-      ],
+      items: [{ title: "Upcoming Dinners", url: "/dinners" }],
     },
     {
       title: "Profile",
       url: "/profile",
       icon: CircleUserRound,
-      items: [
-        {
-          title: "Profile info",
-          url: "/profile",
-        },
-      ],
+      items: [{ title: "Profile info", url: "/profile" }],
     },
     {
       title: "Settings",
       url: "/settings/reset-password",
       icon: Settings2,
-      items: [
-        {
-          title: "Reset Password",
-          url: "/settings/reset-password",
-        },
-      ],
+      items: [{ title: "Reset Password", url: "/settings/reset-password" }],
     },
   ],
 };
@@ -128,26 +105,33 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       })
         .then((res) => res.json())
         .then((data) => setOrganizations(data))
-        .catch((error_) => {
-          setError(error_.message);
-        });
+        .catch((error_) => setError(error_.message));
     }
   }, [user]);
+
+  // ⬇️ Dynamic nav: append Super-Admin item only when applicable
+  const navItems = React.useMemo(() => {
+    if (user?.role !== "SUPER_ADMIN") return data.navMain;
+    return [
+      // put it on top; move below if you prefer it later in the list
+      {
+        title: "Admin",
+        url: "/super-admin",
+        icon: Activity,
+        items: [{ title: "Monitoring", url: "/super-admin" }],
+      },
+      ...data.navMain,
+    ];
+  }, [user?.role]);
 
   const handleLogout = async () => {
     setError(undefined);
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/users/logout`,
-        {
-          method: "POST",
-          credentials: "include",
-        },
+        { method: "POST", credentials: "include" },
       );
-
-      if (!response.ok) {
-        throw new Error("Failed to log out. Please try again.");
-      }
+      if (!response.ok) throw new Error("Failed to log out. Please try again.");
       router.push("/login");
     } catch {
       setError("Failed to log out. Please try again.");
@@ -176,6 +160,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+
         {user?.role === "SUPER_ADMIN" && organizations.length > 0 && (
           <div className="px-4 py-2">
             <label className="mb-1 block text-sm font-medium text-sidebar-foreground">
@@ -186,24 +171,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               value={user.organization_id}
               onChange={async (e) => {
                 const newOrgId = e.target.value;
-
                 try {
                   const response = await fetch(
                     `${process.env.NEXT_PUBLIC_API_URL}/api/users/switch-organization`,
                     {
                       method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                      },
+                      headers: { "Content-Type": "application/json" },
                       credentials: "include",
                       body: JSON.stringify({ organization_id: newOrgId }),
                     },
                   );
-
-                  if (!response.ok) {
+                  if (!response.ok)
                     throw new Error("Failed to update organization");
-                  }
-
                   setUser(
                     (prev) =>
                       prev && { ...prev, organization_id: Number(newOrgId) },
@@ -227,15 +206,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </div>
         )}
       </SidebarHeader>
+
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        {/* ⬇️ Use the dynamic list */}
+        <NavMain items={navItems} />
       </SidebarContent>
+
       <SidebarFooter>
         {error && <p style={{ color: "red" }}>{error}</p>}
         <div className="flex items-center space-x-4 p-4">
           <Button className="w-full" onClick={handleLogout}>
-            <LogOut className="mr-2" />{" "}
-            {/* Manually add the icon to the left of the text */}
+            <LogOut className="mr-2" />
             Sign out
           </Button>
         </div>
