@@ -106,35 +106,47 @@ export default function Page() {
     }
   }, []);
 
-  const fetchLogs = useCallback(
-    async (next?: boolean) => {
-      if (next && cursor === undefined) return;
-      setLogsLoading(true);
-      try {
-        const url = new URL(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/admin/monitor/logs`,
-        );
-        if (next && cursor !== undefined)
-          url.searchParams.set("cursor", String(cursor));
-        url.searchParams.set("limit", "50");
-        const res = await fetch(url.toString(), { credentials: "include" });
-        if (!res.ok) throw new Error("Failed logs fetch");
-        const data: { items: AuditItem[]; nextCursor: number | null } =
-          await res.json();
-        if (next) setLogs((p) => [...p, ...data.items]);
-        else setLogs(data.items);
-        setCursor(data.nextCursor ?? undefined);
-      } finally {
-        setLogsLoading(false);
-      }
-    },
-    [cursor],
-  );
+  const fetchLogsInitial = useCallback(async () => {
+  setLogsLoading(true);
+  try {
+    const url = new URL(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/admin/monitor/logs`,
+    );
+    url.searchParams.set("limit", "50");
+    const res = await fetch(url.toString(), { credentials: "include" });
+    if (!res.ok) throw new Error("Failed logs fetch");
+    const data: { items: AuditItem[]; nextCursor: number | null } = await res.json();
+    setLogs(data.items);
+    setCursor(data.nextCursor ?? undefined);
+  } finally {
+    setLogsLoading(false);
+  }
+}, []);
+
+const fetchLogsMore = useCallback(async () => {
+  if (cursor === undefined) return;
+  setLogsLoading(true);
+  try {
+    const url = new URL(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/admin/monitor/logs`,
+    );
+    url.searchParams.set("limit", "50");
+    url.searchParams.set("cursor", String(cursor));
+    const res = await fetch(url.toString(), { credentials: "include" });
+    if (!res.ok) throw new Error("Failed logs fetch");
+    const data: { items: AuditItem[]; nextCursor: number | null } = await res.json();
+    setLogs((prev) => [...prev, ...data.items]);
+    setCursor(data.nextCursor ?? undefined);
+  } finally {
+    setLogsLoading(false);
+  }
+}, [cursor]);
 
   useEffect(() => {
-    void fetchCounters();
-    void fetchLogs();
-  }, [fetchCounters, fetchLogs]);
+  void fetchCounters();
+  void fetchLogsInitial();
+  // fetch only once on mount
+}, [fetchCounters, fetchLogsInitial]);
 
   // Derived list based on toggle
   const visibleLogs = useMemo(() => {
@@ -162,18 +174,18 @@ export default function Page() {
           </div>
           <div className="ml-auto flex items-center gap-2 px-4">
             <Button
-              size="sm"
-              variant="outline"
-              onClick={async () => {
-                setRefreshing(true);
-                setCursor(undefined); // reset paging
-                await Promise.all([fetchCounters(), fetchLogs()]); // fetchLogs() without 'next' = newest page
-                setRefreshing(false);
-              }}
-            >
-              <RefreshCw className="mr-2 size-4" />{" "}
-              {refreshing ? "Refreshing…" : "Refresh"}
-            </Button>
+  size="sm"
+  variant="outline"
+  onClick={async () => {
+    setRefreshing(true);
+    setCursor(undefined);
+    await Promise.all([fetchCounters(), fetchLogsInitial()]);
+    setRefreshing(false);
+  }}
+>
+  <RefreshCw className="mr-2 size-4" />
+  {refreshing ? "Refreshing…" : "Refresh"}
+</Button>
           </div>
         </header>
 
@@ -358,13 +370,13 @@ export default function Page() {
                       </div>
                     ) : (
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => fetchLogs(true)}
-                        disabled={logsLoading}
-                      >
-                        {logsLoading ? "Loading…" : "Load more"}
-                      </Button>
+  variant="outline"
+  size="sm"
+  onClick={fetchLogsMore}
+  disabled={logsLoading || cursor === undefined}
+>
+  {logsLoading ? "Loading…" : "Load more"}
+</Button>
                     )}
                   </div>
                 </div>
