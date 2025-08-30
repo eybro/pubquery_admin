@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { CalendarIcon, PlusIcon } from "lucide-react";
+import { CalendarIcon, PlusIcon, Trash2, Pencil, Save, X } from "lucide-react";
 import { toZonedTime } from "date-fns-tz";
 import {
   Select,
@@ -21,7 +21,6 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { Trash2, Pencil, Save } from "lucide-react"; // Import icons
 import {
   Popover,
   PopoverTrigger,
@@ -32,13 +31,12 @@ import { cn } from "@/lib/utils";
 import React from "react";
 import { add, format } from "date-fns";
 import { TimePickerDemo } from "@/components/time-picker-demo";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { SourceBadge } from "@/components/source-badge";
+
+/* ───────────────── helpers ───────────────── */
 
 function DateTimePicker({
   date,
@@ -87,213 +85,424 @@ type Pub = {
   id: number;
   title: string;
   date: string;
-  auto_created: number;
+  auto_created: boolean;
   fb_link: string;
   venue_id: number;
   description: string;
   patches: boolean;
+  co_host_organization_id?: number 
+  cohost_display_name?: string 
 };
-
-type Venue = {
+type Venue = { id: number; name: string };
+type Organization = {
   id: number;
   name: string;
+  display_name?: string | undefined;
 };
 
-function PubAccordionItem({
+function formatURL(url?: string | undefined): string {
+  if (!url || typeof url !== "string") return "";
+  const u = url.trim();
+  return u === ""
+    ? ""
+    : (u.startsWith("http://") || u.startsWith("https://")
+      ? u
+      : `https://${u}`);
+}
+
+function formatDateReadable(isoString: string) {
+  const date = new Date(isoString);
+  const now = new Date();
+  const options: Intl.DateTimeFormatOptions = {
+    weekday: "long",
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "CET",
+  };
+  const formattedDate = new Intl.DateTimeFormat("en-GB", options).format(date);
+  const split = formattedDate.split(" ").filter((word) => word !== "at");
+  const [weekday, day, month, time] = split;
+
+  if (date.toUTCString().slice(0, 16) === now.toUTCString().slice(0, 16)) {
+    return `Today at ${time}`;
+  }
+  if (date > now && date < add(now, { days: 7 - now.getDay() })) {
+    return `${weekday} at ${time}`;
+  }
+  return `${day} ${month} at ${time}`;
+}
+
+/* Truncated description with Show more / Show less */
+function ExpandableText({
+  text,
+  maxChars = 160,
+}: {
+  text: string;
+  maxChars?: number;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  if (!text) return <span>—</span>;
+  const needsClamp = text.length > maxChars;
+  const shown =
+    expanded || !needsClamp ? text : text.slice(0, maxChars).trimEnd() + "…";
+  return (
+    <div>
+      <p className={`break-words ${expanded ? "whitespace-pre-wrap" : ""}`}>
+        {shown}
+      </p>
+      {needsClamp && (
+        <Button
+          variant="link"
+          size="sm"
+          className="px-0"
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {expanded ? "Show less" : "Show more"}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/* ───────────────── Card-style, editable pub item ───────────────── */
+
+function PubCardItem({
   pub,
+  canEdit = true,
   deletePub,
   updatePub,
-  formatDate,
-  showMessage,
   venues,
+  orgs,
+  showMessage,
 }: {
   pub: Pub;
+  canEdit?: boolean;
   venues: Venue[];
+  orgs: Organization[];
   deletePub: (id: number) => void;
   updatePub: (pub: Pub) => void;
-  formatDate: (date: string) => string;
   showMessage: (text: string, type: "success" | "error") => void;
 }) {
   const [editable, setEditable] = useState(false);
-  const [editedPub, seteditedPub] = useState<Pub>(pub);
+  const [editedPub, setEditedPub] = useState<Pub>(pub);
 
-  const handleChange = (field: keyof Pub, value: string | number | boolean) => {
-    if (
-      field === "date" &&
-      typeof value === "string" &&
-      new Date(value) < new Date(new Date().setHours(0, 0, 0, 0))
-    ) {
-      showMessage("You cannot select a past date", "error");
-      return;
+  const venueName = venues.find(
+    (v) => v.id === (editable ? editedPub.venue_id : pub.venue_id),
+  )?.name;
+  const cohostName =
+    ((editable ? editedPub.cohost_display_name : pub.cohost_display_name) ??
+    (editable
+      ? editedPub.co_host_organization_id
+      : pub.co_host_organization_id))
+      ? (orgs.find(
+          (o) =>
+            o.id ===
+            (editable
+              ? editedPub.co_host_organization_id
+              : pub.co_host_organization_id),
+        )?.display_name ??
+        orgs.find(
+          (o) =>
+            o.id ===
+            (editable
+              ? editedPub.co_host_organization_id
+              : pub.co_host_organization_id),
+        )?.name)
+      : undefined;
+
+  const isEditable = canEdit && editable;
+
+  const handleChange = <K extends keyof Pub>(field: K, value: Pub[K]) => {
+    if (field === "date") {
+      const v = value as Pub["date"];
+      if (
+        typeof v === "string" &&
+        new Date(v) < new Date(new Date().setHours(0, 0, 0, 0))
+      ) {
+        showMessage("You cannot select a past date", "error");
+        return;
+      }
     }
-
-    seteditedPub((prev) => ({ ...prev, [field]: value }));
+    setEditedPub((prev) => ({ ...prev, [field]: value }));
   };
+
+  const onNumberSelect = (field: "co_host_organization_id") => (val: string) => {
+  const nextVal: Pub["co_host_organization_id"] =
+    val === "none" ? undefined : Number(val);
+  handleChange(field, nextVal);
+};
 
   const handleSave = () => {
     updatePub(editedPub);
     setEditable(false);
   };
 
+  const handleCancel = () => {
+    setEditedPub(pub);
+    setEditable(false);
+  };
+
+  const fbLink = formatURL(
+    (isEditable ? editedPub.fb_link : pub.fb_link) ?? "",
+  );
+
   return (
-    <AccordionItem
-      value={`pub-${pub.id}`}
-      className="rounded-lg border bg-muted/50"
-    >
-      <div className="flex flex-col items-center gap-2 p-4 sm:relative sm:flex-row sm:justify-between sm:gap-0">
-        {/* Date (left on larger screens) */}
-        <div className="rounded-lg border border-gray-300 bg-gray-200 px-3 py-1 text-lg font-medium text-primary shadow-sm">
-          {formatDate(pub.date)}
-        </div>
-
-        <div className="break-words text-center text-xl sm:static sm:w-full sm:translate-x-0">
-          {pub.title}
-        </div>
-
-        {/* Action Buttons (right on larger screens) */}
-        <div className="flex flex-col items-end gap-2 sm:w-1/4">
-          <div className="flex items-center gap-2">
-            {editable ? (
-              <Button size="icon" variant="default" onClick={handleSave}>
-                <Save className="size-4" />
-              </Button>
-            ) : (
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={() => setEditable(true)}
-              >
-                <Pencil className="size-4" />
-              </Button>
-            )}
-            <Button
-              size="icon"
-              variant="destructive"
-              onClick={() => {
-                if (
-                  confirm(
-                    "Are you sure you want to delete this pub? This action cannot be undone.",
-                  )
-                ) {
-                  deletePub(pub.id);
-                }
-              }}
-            >
-              <Trash2 className="size-4" />
-            </Button>
+    <Card className="rounded-xl">
+      <CardContent className="p-4 sm:p-5">
+        {/* Header */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 flex-col">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg border border-gray-300 bg-gray-200 px-2.5 py-0.5 text-sm font-semibold text-primary shadow-sm">
+                {formatDateReadable(pub.date)}
+              </div>
+              <SourceBadge auto_created={pub.auto_created} />
+              {!!pub.patches && (
+                <Badge className="bg-blue-600 text-white">Patches</Badge>
+              )}
+              {!canEdit && (
+                <Badge variant="secondary" className="hidden sm:inline-block">
+                  View only
+                </Badge>
+              )}
+            </div>
+            {/* Title display; input moved to details when editing */}
+            <h3 className="mt-1 truncate text-lg font-semibold sm:text-xl">
+              {isEditable ? editedPub.title : pub.title}
+            </h3>
           </div>
 
-          {pub.auto_created === 1 && (
-            <span className="border-black-300 inline-flex h-6 items-center rounded-md border bg-green-600 px-2 py-0.5 text-[12px] font-semibold text-white">
-              System Generated
-            </span>
-          )}
+          {/* Right-side actions */}
+          <div className="flex items-center gap-2">
+            {/* facebook button (view) */}
+            {fbLink ? (
+              <Button
+                asChild
+                size="sm"
+                className="shrink-0 bg-[#1877F2] text-white hover:bg-[#166FE5]"
+                disabled={isEditable}
+                title={
+                  isEditable ? "Finish editing to open" : "Open facebook link"
+                }
+              >
+                <a href={fbLink} target="_blank" rel="noopener noreferrer">
+                  facebook
+                </a>
+              </Button>
+            ) : (
+              <Badge variant="secondary" className="shrink-0">
+                No link
+              </Badge>
+            )}
+
+            {canEdit && !isEditable && (
+              <>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={() => setEditable(true)}
+                  title="Edit"
+                >
+                  <Pencil className="size-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="destructive"
+                  onClick={() => {
+                    if (
+                      confirm(
+                        "Are you sure you want to delete this pub? This action cannot be undone.",
+                      )
+                    ) {
+                      deletePub(pub.id);
+                    }
+                  }}
+                  title="Delete"
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </>
+            )}
+
+            {canEdit && isEditable && (
+              <>
+                <Button
+                  size="icon"
+                  variant="default"
+                  onClick={handleSave}
+                  title="Save"
+                >
+                  <Save className="size-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={handleCancel}
+                  title="Cancel"
+                >
+                  <X className="size-4" />
+                </Button>
+              </>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Expand Button */}
-      <AccordionTrigger className="w-full border-t px-4 py-2 text-sm font-medium hover:bg-muted">
-        Show details
-      </AccordionTrigger>
+        {/* Details grid */}
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-12">
+          {/* Date */}
+          <div className="sm:col-span-4">
+            <Label>Date</Label>
+            <DateTimePicker
+              date={
+                (isEditable ? editedPub.date : pub.date)
+                  ? new Date(isEditable ? editedPub.date : pub.date)
+                  : undefined
+              }
+              setDate={(d) => handleChange("date", d?.toISOString() || "")}
+              disabled={!isEditable}
+            />
+          </div>
 
-      <AccordionContent className="grid grid-cols-1 gap-4 border-t px-4 py-3 sm:grid-cols-2">
-        {/* Date Display or Picker */}
-        <div className="flex flex-col gap-1">
-          <Label htmlFor={`title-${pub.id}`}>Date</Label>
-          <DateTimePicker
-            date={editedPub.date ? new Date(editedPub.date) : undefined}
-            setDate={(selectedDate) => {
-              handleChange("date", selectedDate?.toISOString() || "");
-            }}
-            disabled={!editable}
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <Label htmlFor={`title-${pub.id}`}>Title</Label>
-          <Input
-            id={`title-${pub.id}`}
-            value={editedPub.title}
-            disabled={!editable}
-            onChange={(e) => handleChange("title", e.target.value)}
-            className="bg-white"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <Label>Venue</Label>
-          <Select
-            value={editedPub.venue_id.toString()}
-            onValueChange={(value) => handleChange("venue_id", value)}
-            disabled={!editable}
-          >
-            <SelectTrigger className="w-full bg-white">
-              <SelectValue placeholder="Select venue" />
-            </SelectTrigger>
-            <SelectContent>
-              {venues.map((venue) => (
-                <SelectItem key={venue.id} value={venue.id.toString()}>
-                  {venue.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex w-full flex-col gap-1 sm:flex-row sm:items-end sm:gap-4">
-          {/* Event Link */}
-          <div className="flex flex-col gap-1 sm:flex-1">
-            <Label htmlFor={`event-link-${pub.id}`}>Event Link</Label>
+          {/* Title (input only when editing) */}
+          <div className="sm:col-span-8">
+            <Label htmlFor={`title-${pub.id}`}>Title</Label>
             <Input
-              id={`event-link-${pub.id}`}
-              value={editedPub.fb_link ?? ""}
-              disabled={!editable}
-              onChange={(e) => handleChange("fb_link", e.target.value)}
+              id={`title-${pub.id}`}
+              value={isEditable ? editedPub.title : pub.title}
+              disabled={!isEditable}
+              onChange={(e) => handleChange("title", e.target.value)}
               className="bg-white"
             />
           </div>
 
-          {/* Patches Toggle */}
-          <div className="mt-[22px] flex h-[38px] items-center gap-2 rounded-md border border-input bg-white px-3 py-2 sm:mt-0 sm:h-[38px]">
-            <Label
-              htmlFor="sellPatches"
-              className="text-sm text-muted-foreground"
+          {/* Venue */}
+          <div className="sm:col-span-4">
+            <Label>Venue</Label>
+            <Select
+              value={(isEditable
+                ? editedPub.venue_id
+                : pub.venue_id
+              ).toString()}
+              onValueChange={(v) => handleChange("venue_id", Number(v))}
+              disabled={!isEditable}
             >
-              Patches offered?
-            </Label>
-            <Switch
-              id="sellPatches"
-              checked={editedPub.patches}
-              disabled={!editable}
-              onCheckedChange={(checked) => handleChange("patches", checked)}
-            />
+              <SelectTrigger className="w-full bg-white">
+                <SelectValue placeholder="Select venue" />
+              </SelectTrigger>
+              <SelectContent>
+                {venues.map((venue) => (
+                  <SelectItem key={venue.id} value={venue.id.toString()}>
+                    {venue.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!isEditable && venueName && (
+              <div className="mt-1 text-xs text-muted-foreground">
+                Current: {venueName}
+              </div>
+            )}
+          </div>
+
+          {/* Co-host */}
+          <div className="sm:col-span-4">
+            <Label>Co-host (optional)</Label>
+            <Select
+              value={
+                (isEditable
+                  ? editedPub.co_host_organization_id
+                  : pub.co_host_organization_id) == undefined
+                  ? "none"
+                  : String(
+                      isEditable
+                        ? editedPub.co_host_organization_id
+                        : pub.co_host_organization_id,
+                    )
+              }
+              onValueChange={onNumberSelect("co_host_organization_id")}
+              disabled={!isEditable}
+            >
+              <SelectTrigger className="w-full bg-white">
+                <SelectValue placeholder="Select co-host" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No co-host</SelectItem>
+                {orgs.map((o) => (
+                  <SelectItem key={o.id} value={o.id.toString()}>
+                    {o.display_name ?? o.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!isEditable && (
+              <div className="mt-1 text-xs text-muted-foreground">
+                Current: {cohostName ?? "—"}
+              </div>
+            )}
+          </div>
+
+          {/* Patches */}
+          <div className="sm:col-span-4">
+            <Label htmlFor={`sellPatches-${pub.id}`}>Patches offered?</Label>
+            <div className="flex h-10 items-center gap-2 rounded-md border border-input bg-white px-3">
+              <Switch
+                id={`sellPatches-${pub.id}`}
+                checked={isEditable ? editedPub.patches : pub.patches}
+                disabled={!isEditable}
+                onCheckedChange={(checked) => handleChange("patches", checked)}
+              />
+              {!isEditable && (
+                <span className="text-sm">{pub.patches ? "Yes" : "No"}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Event Link (edit only; view uses the facebook button in header) */}
+          {isEditable && (
+            <div className="sm:col-span-12">
+              <Label htmlFor={`event-link-${pub.id}`}>Event Link</Label>
+              <Input
+                id={`event-link-${pub.id}`}
+                value={editedPub.fb_link ?? ""}
+                disabled={!isEditable}
+                onChange={(e) => handleChange("fb_link", e.target.value)}
+                className="bg-white"
+              />
+            </div>
+          )}
+
+          {/* Description */}
+          <div className="sm:col-span-12">
+            <Label>Description</Label>
+            {isEditable ? (
+              <Textarea
+                placeholder="Enter description..."
+                value={editedPub.description}
+                disabled={!isEditable}
+                onChange={(e) =>
+                  handleChange("description", e.target.value.slice(0, 2000))
+                }
+                className="w-full bg-white"
+                rows={4}
+              />
+            ) : (
+              <ExpandableText text={pub.description} maxChars={160} />
+            )}
           </div>
         </div>
-        {/* Description */}
-        <div className="flex w-full flex-col gap-1 sm:col-span-2">
-          <Textarea
-            placeholder="Enter description..."
-            value={editedPub.description}
-            disabled={!editable}
-            onChange={(e) =>
-              handleChange("description", e.target.value.slice(0, 2000))
-            }
-            className="w-full bg-white"
-            rows={4}
-          />
-        </div>
-      </AccordionContent>
-    </AccordionItem>
+      </CardContent>
+    </Card>
   );
 }
 
-function formatURL(url?: string | null): string {
-  if (!url || typeof url !== "string") return "";
-  return url.trim().startsWith("http") ? url : `https://${url.trim()}`;
-}
+/* ───────────────── Page ───────────────── */
 
 export default function Page() {
   const [pubs, setpubs] = useState<Pub[]>([]);
+  const [cohostPubs, setCohostPubs] = useState<Pub[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sellPatches, setSellPatches] = useState(false);
   const [date, setDate] = React.useState<Date>();
@@ -302,6 +511,8 @@ export default function Page() {
   const [description, setDescription] = useState("");
   const [venueId, setVenueId] = useState("");
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [cohostOrgId, setCohostOrgId] = useState<string>("none");
+  const [orgs, setOrgs] = useState<Organization[]>([]);
   const [message, setMessage] = useState<{
     text: string;
     type: "success" | "error";
@@ -312,52 +523,14 @@ export default function Page() {
     setTimeout(() => setMessage(undefined), 3000);
   };
 
-  const formatDate = (isoString: string) => {
-    const date = new Date(isoString);
-    const now = new Date();
-
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: "long",
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-      timeZone: "CET",
-    };
-
-    const formattedDate = new Intl.DateTimeFormat("en-GB", options).format(
-      date,
-    );
-    let split = formattedDate.split(" ");
-    split = split.filter((word) => word !== "at");
-    const [weekday, day, month, time] = split;
-
-    // If it's today
-    if (date.toUTCString().slice(0, 16) === now.toUTCString().slice(0, 16)) {
-      return `Today at ${time}`;
-    }
-
-    // if it's this week
-    if (date > now && date < add(now, { days: 7 - now.getDay() })) {
-      return `${weekday} at ${time}`;
-    }
-
-    // Default format
-    return `${day} ${month} at ${time}`;
-  };
-
   const handleSelect = (newDay: Date | undefined) => {
     if (!newDay) return;
-
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
     if (newDay < today) {
       showMessage("You cannot select a past date", "error");
       return;
     }
-
     if (!date) {
       setDate(newDay);
       return;
@@ -365,11 +538,10 @@ export default function Page() {
     const diff = newDay.getTime() - date.getTime();
     const diffInDays = diff / (1000 * 60 * 60 * 24);
     const newDateFull = add(date, { days: Math.ceil(diffInDays) });
-
     setDate(newDateFull);
   };
 
-  // Fetch pubs
+  // Fetch pubs + lookups
   useEffect(() => {
     async function fetchPubs() {
       try {
@@ -380,25 +552,44 @@ export default function Page() {
             credentials: "include",
           },
         );
-
         if (!response.ok) throw new Error("Failed to fetch pubs");
-
-        const data = await response.json();
+        const data: Pub[] = await response.json();
         setpubs(
-          data.map((pub: { fb_link: string }) => ({
+          data.map((pub) => ({
             ...pub,
             fb_link: pub.fb_link ?? "",
+            auto_created: !!pub.auto_created,
           })),
         );
       } catch (error: unknown) {
-        if (error instanceof Error) {
+        if (error instanceof Error)
           setMessage({ text: error.message, type: "error" });
-        } else {
-          setMessage({ text: "An unknown error occurred", type: "error" });
-        }
+        else setMessage({ text: "An unknown error occurred", type: "error" });
       }
     }
     fetchPubs();
+
+    async function fetchCohostPubs() {
+      try {
+        const url = `${process.env.NEXT_PUBLIC_API_URL}/api/events/getUpcomingCohost`;
+        const res = await fetch(url, { method: "GET", credentials: "include" });
+        if (!res.ok) throw new Error("Failed to fetch co-hosted pubs");
+        const data: Pub[] = await res.json();
+        setCohostPubs(
+          data.map((pub) => ({
+            ...pub,
+            fb_link: pub.fb_link ?? "",
+            auto_created: !!pub.auto_created,
+          })),
+        );
+      } catch (error) {
+        setMessage({
+          text: "Failed to fetch co-hosted pubs " + error,
+          type: "error",
+        });
+      }
+    }
+    fetchCohostPubs();
 
     async function fetchVenues() {
       try {
@@ -409,42 +600,60 @@ export default function Page() {
             credentials: "include",
           },
         );
-
         if (!response.ok) throw new Error("Failed to fetch venues");
-
         const data = await response.json();
         setVenues(data);
       } catch (error: unknown) {
-        if (error instanceof Error) {
+        if (error instanceof Error)
           setMessage({ text: error.message, type: "error" });
-        } else {
-          setMessage({ text: "An unknown error occurred", type: "error" });
-        }
+        else setMessage({ text: "An unknown error occurred", type: "error" });
       }
     }
     fetchVenues();
+
+    async function fetchOrganizations() {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/organizations`,
+          {
+            method: "GET",
+            credentials: "include",
+          },
+        );
+        if (!res.ok) throw new Error("Failed to fetch organizations");
+        const data: Organization[] = await res.json();
+        const normalized: Organization[] = data.map((o) => ({
+          id: o.id,
+          name: o.name,
+          display_name: o.display_name ?? o.name,
+        }));
+        setOrgs(normalized);
+      } catch (error) {
+        setMessage({
+          text: "Failed to fetch organizations " + error,
+          type: "error",
+        });
+      }
+    }
+    fetchOrganizations();
 
     const fetchDefaultVenue = async () => {
       try {
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/api/users/venue`,
-          { credentials: "include" },
+          {
+            credentials: "include",
+          },
         );
-
         if (!response.ok) throw new Error("Failed to fetch default venue");
-
         const data = await response.json();
-
         setVenueId(data.venueId.toString());
       } catch (error: unknown) {
-        if (error instanceof Error) {
+        if (error instanceof Error)
           setMessage({ text: error.message, type: "error" });
-        } else {
-          setMessage({ text: "An unknown error occurred", type: "error" });
-        }
+        else setMessage({ text: "An unknown error occurred", type: "error" });
       }
     };
-
     fetchDefaultVenue();
   }, []);
 
@@ -454,9 +663,7 @@ export default function Page() {
       showMessage("Please provide at least title and date", "error");
       return;
     }
-
     const formated_event_link = formatURL(event_link);
-
     const localDate = toZonedTime(date, "Europe/Stockholm");
     const formattedDate = format(localDate, "yyyy-MM-dd'T'HH:mm:ssXXX");
 
@@ -477,6 +684,8 @@ export default function Page() {
             venue_id: venueId,
             description: description,
             patches: sellPatches,
+            co_host_organization_id:
+              cohostOrgId === "none" ? undefined : Number(cohostOrgId),
           }),
         },
       );
@@ -491,11 +700,9 @@ export default function Page() {
       setpubs([...pubs, newpub.event]);
       showMessage("pub added successfully!", "success");
     } catch (error: unknown) {
-      if (error instanceof Error) {
+      if (error instanceof Error)
         setMessage({ text: error.message, type: "error" });
-      } else {
-        setMessage({ text: "An unknown error occurred", type: "error" });
-      }
+      else setMessage({ text: "An unknown error occurred", type: "error" });
     } finally {
       setIsLoading(false);
     }
@@ -510,24 +717,19 @@ export default function Page() {
           credentials: "include",
         },
       );
-
       if (!response.ok) throw new Error("Failed to delete pub");
-
       setpubs(pubs.filter((pub) => pub.id !== id));
       showMessage("pub deleted successfully!", "success");
     } catch (error: unknown) {
-      if (error instanceof Error) {
+      if (error instanceof Error)
         setMessage({ text: error.message, type: "error" });
-      } else {
-        setMessage({ text: "An unknown error occurred", type: "error" });
-      }
+      else setMessage({ text: "An unknown error occurred", type: "error" });
     }
   };
 
   const updatePub = async (pub: Pub) => {
     const localDate = toZonedTime(pub.date, "Europe/Stockholm");
     const formattedDate = format(localDate, "yyyy-MM-dd'T'HH:mm:ssXXX");
-
     const formatted_event_link = formatURL(pub.fb_link);
 
     try {
@@ -546,6 +748,10 @@ export default function Page() {
             venue_id: pub.venue_id,
             description: pub.description,
             patches: pub.patches,
+            co_host_organization_id:
+              pub.co_host_organization_id == undefined
+                ? undefined
+                : Number(pub.co_host_organization_id),
           }),
         },
       );
@@ -553,20 +759,16 @@ export default function Page() {
       if (!response.ok) throw new Error("Failed to update pub");
 
       const updatedpub = await response.json();
-
       setpubs((prevpubs) =>
         prevpubs.map((d) =>
           d.id === updatedpub.event.id ? updatedpub.event : d,
         ),
       );
-
       showMessage("pub updated successfully!", "success");
     } catch (error: unknown) {
-      if (error instanceof Error) {
+      if (error instanceof Error)
         setMessage({ text: error.message, type: "error" });
-      } else {
-        setMessage({ text: "An unknown error occurred", type: "error" });
-      }
+      else setMessage({ text: "An unknown error occurred", type: "error" });
     }
   };
 
@@ -583,6 +785,7 @@ export default function Page() {
             {message.text}
           </div>
         )}
+
         <header className="flex h-16 shrink-0 items-center gap-2">
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
@@ -590,57 +793,62 @@ export default function Page() {
             <h1 className="text-xl font-semibold">Add & Edit Pubs</h1>
           </div>
         </header>
+
         {isLoading && (
           <div className="fixed right-4 top-4 rounded-lg bg-blue-600 px-4 py-2 text-white shadow-lg">
             Loading...
           </div>
         )}
 
+        {/* Create form */}
         <div className="p-4">
-          <div className="mb-4 flex w-full max-w-[1200px] flex-wrap gap-4 rounded-lg border bg-secondary p-4 shadow-sm">
+          <div className="w/full mb-4 grid max-w-[1200px] grid-cols-1 gap-4 rounded-lg border bg-secondary p-4 shadow-sm md:grid-cols-12">
             {/* Date Picker */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start truncate text-left font-normal sm:w-[30%]",
-                    !date && "text-muted-foreground",
-                  )}
-                >
-                  <CalendarIcon className="mr-2 size-4" />
-                  {date ? (
-                    format(date, "PPP HH:mm:ss")
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={(d) => handleSelect(d)}
-                  initialFocus
-                />
-                <div className="border-t border-border p-3">
-                  <TimePickerDemo setDate={setDate} date={date} />
-                </div>
-              </PopoverContent>
-            </Popover>
+            <div className="col-span-12 md:col-span-4">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start truncate text-left font-normal",
+                      !date && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 size-4" />
+                    {date ? (
+                      format(date, "PPP HH:mm:ss")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={(d) => handleSelect(d)}
+                    initialFocus
+                  />
+                  <div className="border-t border-border p-3">
+                    <TimePickerDemo setDate={setDate} date={date} />
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
 
-            {/* Title Input */}
-            <Input
-              placeholder="Enter title..."
-              value={eventTitle}
-              onChange={(e) => setEventTitle(e.target.value)}
-              className="flex-1 bg-white text-center font-semibold"
-            />
+            {/* Title */}
+            <div className="col-span-12 md:col-span-8">
+              <Input
+                placeholder="Enter title..."
+                value={eventTitle}
+                onChange={(e) => setEventTitle(e.target.value)}
+                className="w-full bg-white text-center font-semibold"
+              />
+            </div>
 
-            <div className="flex w-full flex-wrap gap-4">
-              {/* Venue */}
+            <div className="col-span-12 md:col-span-4">
               <Select value={venueId} onValueChange={setVenueId}>
-                <SelectTrigger className="w-full bg-white sm:w-[30%]">
+                <SelectTrigger className="w-full bg-white">
                   <SelectValue placeholder="Select venue" />
                 </SelectTrigger>
                 <SelectContent>
@@ -651,16 +859,28 @@ export default function Page() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
 
-              {/* Event Link */}
-              <Input
-                placeholder="Enter event link..."
-                value={event_link}
-                onChange={(e) => setEventLink(e.target.value)}
-                className="flex-1 bg-white"
-              />
-              {/* Sell Patches Toggle */}
-              <div className="flex items-center gap-2 rounded-md border border-input bg-white px-3 py-2">
+            {/* Co-host */}
+            <div className="col-span-12 md:col-span-4">
+              <Select value={cohostOrgId} onValueChange={setCohostOrgId}>
+                <SelectTrigger className="w-full bg-white">
+                  <SelectValue placeholder="Select co-host (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No co-host</SelectItem>
+                  {orgs.map((o) => (
+                    <SelectItem key={o.id} value={o.id.toString()}>
+                      {o.display_name ?? o.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Patches offered? */}
+            <div className="col-span-12 md:col-span-4">
+              <div className="flex h-10 items-center gap-2 rounded-md border border-input bg-white px-3">
                 <Label
                   htmlFor="sellPatches"
                   className="text-sm text-muted-foreground"
@@ -675,8 +895,18 @@ export default function Page() {
               </div>
             </div>
 
+            {/* Event Link — FULL WIDTH */}
+            <div className="col-span-12 min-w-0">
+              <Input
+                placeholder="Enter event link..."
+                value={event_link}
+                onChange={(e) => setEventLink(e.target.value)}
+                className="w-full bg-white"
+              />
+            </div>
+
             {/* Description */}
-            <div className="flex w-full flex-col gap-1 sm:col-span-2">
+            <div className="col-span-12">
               <Textarea
                 placeholder="Enter description..."
                 value={description}
@@ -686,34 +916,54 @@ export default function Page() {
               />
             </div>
 
-            {/* Submit Button */}
-            <Button variant="default" onClick={addpub} className="w-full">
-              <PlusIcon className="mr-2 size-5" />
-              Add Event
-            </Button>
+            {/* Submit */}
+            <div className="col-span-12">
+              <Button variant="default" onClick={addpub} className="w-full">
+                <PlusIcon className="mr-2 size-5" />
+                Add Event
+              </Button>
+            </div>
           </div>
 
-          {/* List of pubs */}
-
-          <div className="mt-4 w-full max-w-[1200px] space-y-2">
+          {/* List of pubs (cards) */}
+          <div className="mt-4 w-full max-w-[1200px] space-y-3">
             {pubs.length === 0 ? (
               <p className="text-[hsl(var(--muted-foreground))]">
                 No pubs available.
               </p>
             ) : (
-              <Accordion type="single" collapsible className="space-y-2">
-                {pubs.map((pub) => (
-                  <PubAccordionItem
-                    key={pub.id}
+              pubs.map((pub) => (
+                <PubCardItem
+                  key={pub.id}
+                  pub={pub}
+                  canEdit={true}
+                  deletePub={deletePub}
+                  updatePub={updatePub}
+                  showMessage={showMessage}
+                  venues={venues}
+                  orgs={orgs}
+                />
+              ))
+            )}
+
+            {cohostPubs.length > 0 && (
+              <>
+                <h2 className="mb-1 mt-6 text-sm font-semibold text-gray-700">
+                  Co-hosted (view only)
+                </h2>
+                {cohostPubs.map((pub) => (
+                  <PubCardItem
+                    key={`co-${pub.id}`}
                     pub={pub}
+                    canEdit={false}
                     deletePub={deletePub}
                     updatePub={updatePub}
-                    formatDate={formatDate}
                     showMessage={showMessage}
                     venues={venues}
+                    orgs={orgs}
                   />
                 ))}
-              </Accordion>
+              </>
             )}
           </div>
         </div>

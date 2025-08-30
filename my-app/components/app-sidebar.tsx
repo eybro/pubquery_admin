@@ -7,7 +7,7 @@ import {
   User,
   PartyPopper,
   CircleUserRound,
-  Activity,            // ⬅️ add this
+  Activity, // ⬅️ add this
 } from "lucide-react";
 
 import { LogOut } from "lucide-react";
@@ -40,7 +40,6 @@ const data = {
       items: [
         { title: "Upcoming Pubs", url: "/dashboard" },
         { title: "Past Pubs", url: "/dashboard/history" },
-        { title: "Menu", url: "/dashboard/menu" },
       ],
     },
     {
