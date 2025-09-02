@@ -77,8 +77,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const router = useRouter();
   const [error, setError] = useState<string | undefined>();
   const [organizations, setOrganizations] = React.useState<
-    { id: number; name: string }[]
-  >([]);
+  { id: number; name: string; display_name?: string }[]
+>([]);
 
   React.useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`, {
@@ -98,15 +98,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }, []);
 
   React.useEffect(() => {
-    if (user?.role === "SUPER_ADMIN") {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/organizations`, {
-        credentials: "include",
+  if (user?.role === "SUPER_ADMIN") {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/organizations`, {
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((data: { id: number; name: string; display_name?: string }[]) => {
+        // normalize to ensure we always have a label
+        const normalized = data.map((o) => ({
+          id: o.id,
+          name: o.name,
+          display_name: o.display_name ?? o.name,
+        }));
+        setOrganizations(normalized);
       })
-        .then((res) => res.json())
-        .then((data) => setOrganizations(data))
-        .catch((error_) => setError(error_.message));
-    }
-  }, [user]);
+      .catch((error_) => setError(error_.message));
+  }
+}, [user]);
 
   // ⬇️ Dynamic nav: append Super-Admin item only when applicable
   const navItems = React.useMemo(() => {
@@ -166,42 +174,34 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               Switch Organization
             </label>
             <select
-              className="w-full rounded-md border border-gray-500 bg-white p-2 text-sm text-black shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              value={user.organization_id}
-              onChange={async (e) => {
-                const newOrgId = e.target.value;
-                try {
-                  const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/users/switch-organization`,
-                    {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      credentials: "include",
-                      body: JSON.stringify({ organization_id: newOrgId }),
-                    },
-                  );
-                  if (!response.ok)
-                    throw new Error("Failed to update organization");
-                  setUser(
-                    (prev) =>
-                      prev && { ...prev, organization_id: Number(newOrgId) },
-                  );
-                  globalThis.location.reload();
-                } catch (error) {
-                  setError(
-                    error instanceof Error
-                      ? error.message
-                      : "An unknown error occurred",
-                  );
-                }
-              }}
-            >
-              {organizations.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name}
-                </option>
-              ))}
-            </select>
+  className="w-full rounded-md border border-gray-500 bg-white p-2 text-sm text-black shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+  value={String(user?.organization_id ?? "")}
+  onChange={async (e) => {
+    const newOrgId = Number(e.target.value);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/users/switch-organization`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ organization_id: newOrgId }),
+        },
+      );
+      if (!response.ok) throw new Error("Failed to update organization");
+      setUser((prev) => prev && { ...prev, organization_id: newOrgId });
+      globalThis.location.reload();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "An unknown error occurred");
+    }
+  }}
+>
+  {organizations.map((org) => (
+    <option key={org.id} value={org.id}>
+      {org.display_name ?? org.name}
+    </option>
+  ))}
+</select>
           </div>
         )}
       </SidebarHeader>

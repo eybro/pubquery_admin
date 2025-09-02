@@ -177,6 +177,7 @@ function PubCardItem({
   venues,
   orgs,
   showMessage,
+  myOrgId
 }: {
   pub: Pub;
   canEdit?: boolean;
@@ -185,6 +186,7 @@ function PubCardItem({
   deletePub: (id: number) => void;
   updatePub: (pub: Pub) => void;
   showMessage: (text: string, type: "success" | "error") => void;
+  myOrgId: number | undefined;
 }) {
   const [editable, setEditable] = useState(false);
   const [editedPub, setEditedPub] = useState<Pub>(pub);
@@ -230,9 +232,16 @@ function PubCardItem({
   };
 
   const onNumberSelect = (field: "co_host_organization_id") => (val: string) => {
-  const nextVal: Pub["co_host_organization_id"] =
-    val === "none" ? undefined : Number(val);
-  handleChange(field, nextVal);
+  if (val === "none") {
+    handleChange(field, undefined as unknown as Pub["co_host_organization_id"]);
+    return;
+  }
+  const numeric = Number(val);
+  if (myOrgId !== null && numeric === myOrgId) {
+    showMessage("You can’t select your own organization as co-host.", "error");
+    return; 
+  }
+  handleChange(field, numeric as Pub["co_host_organization_id"]);
 };
 
   const handleSave = () => {
@@ -429,13 +438,16 @@ function PubCardItem({
                 <SelectValue placeholder="Select co-host" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No co-host</SelectItem>
-                {orgs.map((o) => (
-                  <SelectItem key={o.id} value={o.id.toString()}>
-                    {o.display_name ?? o.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+  <SelectItem value="none">No co-host</SelectItem>
+  {orgs.map((o) => {
+    const isSelf = myOrgId !== null && o.id === myOrgId;
+    return (
+      <SelectItem key={o.id} value={o.id.toString()} disabled={isSelf}>
+        {(o.display_name ?? o.name) + (isSelf ? " (your org)" : "")}
+      </SelectItem>
+    );
+  })}
+</SelectContent>
             </Select>
             {!isEditable && (
               <div className="mt-1 text-xs text-muted-foreground">
@@ -513,6 +525,7 @@ export default function Page() {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [cohostOrgId, setCohostOrgId] = useState<string>("none");
   const [orgs, setOrgs] = useState<Organization[]>([]);
+  const [myOrgId, setMyOrgId] = useState<number | undefined>();
   const [message, setMessage] = useState<{
     text: string;
     type: "success" | "error";
@@ -648,6 +661,7 @@ export default function Page() {
         if (!response.ok) throw new Error("Failed to fetch default venue");
         const data = await response.json();
         setVenueId(data.venueId.toString());
+        setMyOrgId(Number(data.organization_id));
       } catch (error: unknown) {
         if (error instanceof Error)
           setMessage({ text: error.message, type: "error" });
@@ -667,6 +681,14 @@ export default function Page() {
     const localDate = toZonedTime(date, "Europe/Stockholm");
     const formattedDate = format(localDate, "yyyy-MM-dd'T'HH:mm:ssXXX");
 
+    const chosenCohostId =
+      cohostOrgId === "none" ? undefined : Number(cohostOrgId);
+
+    if (myOrgId !== null && chosenCohostId === myOrgId) {
+      showMessage("You can’t select your own organization as co-host.", "error");
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await fetch(
@@ -684,8 +706,7 @@ export default function Page() {
             venue_id: venueId,
             description: description,
             patches: sellPatches,
-            co_host_organization_id:
-              cohostOrgId === "none" ? undefined : Number(cohostOrgId),
+            co_host_organization_id: chosenCohostId
           }),
         },
       );
@@ -731,6 +752,11 @@ export default function Page() {
     const localDate = toZonedTime(pub.date, "Europe/Stockholm");
     const formattedDate = format(localDate, "yyyy-MM-dd'T'HH:mm:ssXXX");
     const formatted_event_link = formatURL(pub.fb_link);
+
+    if (myOrgId !== null && pub.co_host_organization_id === myOrgId) {
+  showMessage("You can’t select your own organization as co-host.", "error");
+  return;
+}
 
     try {
       const response = await fetch(
@@ -863,20 +889,34 @@ export default function Page() {
 
             {/* Co-host */}
             <div className="col-span-12 md:col-span-4">
-              <Select value={cohostOrgId} onValueChange={setCohostOrgId}>
-                <SelectTrigger className="w-full bg-white">
-                  <SelectValue placeholder="Select co-host (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No co-host</SelectItem>
-                  {orgs.map((o) => (
-                    <SelectItem key={o.id} value={o.id.toString()}>
-                      {o.display_name ?? o.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+  <Select
+    value={cohostOrgId}
+    onValueChange={(val) => {
+      if (val !== "none" && myOrgId !== null && Number(val) === myOrgId) {
+        setCohostOrgId("none");
+        showMessage("You can’t select your own organization as co-host.", "error");
+        return;
+      }
+      setCohostOrgId(val);
+    }}
+  >
+    <SelectTrigger className="w-full bg-white">
+      <SelectValue placeholder="Select co-host (optional)" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="none">No co-host</SelectItem>
+      {orgs.map((o) => {
+        const isSelf = myOrgId !== null && o.id === myOrgId;
+        return (
+          <SelectItem key={o.id} value={o.id.toString()} disabled={isSelf}>
+            {(o.display_name ?? o.name) + (isSelf ? " (your org)" : "")}
+          </SelectItem>
+        );
+      })}
+    </SelectContent>
+  </Select>
+</div>
+
 
             {/* Patches offered? */}
             <div className="col-span-12 md:col-span-4">
@@ -942,6 +982,7 @@ export default function Page() {
                   showMessage={showMessage}
                   venues={venues}
                   orgs={orgs}
+                  myOrgId={myOrgId}
                 />
               ))
             )}
@@ -961,6 +1002,7 @@ export default function Page() {
                     showMessage={showMessage}
                     venues={venues}
                     orgs={orgs}
+                    myOrgId={myOrgId}
                   />
                 ))}
               </>
