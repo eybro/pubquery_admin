@@ -39,8 +39,8 @@ const data = {
       isActive: true,
       items: [
         { title: "Upcoming Pubs", url: "/dashboard" },
-        { title: "Past Pubs", url: "/dashboard/history" },
-        { title: "Visitor Statistics", url: "/dashboard/statistics" },
+        { title: "Past Pubs", url: "/dashboard/history", badge: "New" },           
+        { title: "Visitor Statistics", url: "/dashboard/statistics", badge: "New" } 
       ],
     },
     {
@@ -53,7 +53,8 @@ const data = {
       title: "Profile",
       url: "/profile",
       icon: CircleUserRound,
-      items: [{ title: "Profile info", url: "/profile" }],
+      badge: "New", 
+      items: [{ title: "Profile info", url: "/profile", badge: "New" }],
     },
     {
       title: "Settings",

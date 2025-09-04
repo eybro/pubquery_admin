@@ -19,21 +19,35 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import clsx from "clsx";
+import * as React from "react";
 
-export function NavMain({
-  items,
-}: {
-  items: {
-    title: string;
-    url: string;
-    icon: LucideIcon;
-    isActive?: boolean;
-    items?: {
-      title: string;
-      url: string;
-    }[];
-  }[];
-}) {
+function NewBadge({ children = "New" }: { children?: React.ReactNode }) {
+  return (
+    <span
+      className="ml-2 inline-flex items-center rounded-full bg-blue-600 px-1.5 py-0.5 text-xs font-medium text-white dark:bg-blue-500"
+    >
+      {children}
+    </span>
+  )
+}
+
+
+type NavSubItem = {
+  title: string;
+  url: string;
+  badge?: React.ReactNode | string;
+};
+
+type NavItem = {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+  isActive?: boolean;
+  badge?: React.ReactNode | string;
+  items?: NavSubItem[];
+};
+
+export function NavMain({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
 
   return (
@@ -41,14 +55,9 @@ export function NavMain({
       <SidebarGroupLabel>Menu</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
+          const isAnySubActive = item.items?.some((s) => pathname === s.url);
           return (
-            <Collapsible
-              key={item.title}
-              asChild
-              defaultOpen={item.items?.some(
-                (subItem) => pathname === subItem.url,
-              )}
-            >
+            <Collapsible key={item.title} asChild defaultOpen={isAnySubActive}>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip={item.title}>
                   <a
@@ -56,9 +65,13 @@ export function NavMain({
                     className="flex items-center space-x-2 px-3 py-2 transition-colors"
                   >
                     <item.icon />
-                    <span>{item.title}</span>
+                    <span className="flex items-center">
+                      <span>{item.title}</span>
+                      {item.badge ? <NewBadge>{item.badge}</NewBadge> : undefined}
+                    </span>
                   </a>
                 </SidebarMenuButton>
+
                 {item.items?.length ? (
                   <>
                     <CollapsibleTrigger asChild>
@@ -67,6 +80,7 @@ export function NavMain({
                         <span className="sr-only">Toggle</span>
                       </SidebarMenuAction>
                     </CollapsibleTrigger>
+
                     <CollapsibleContent>
                       <SidebarMenuSub>
                         {item.items.map((subItem) => {
@@ -77,12 +91,17 @@ export function NavMain({
                                 <a
                                   href={subItem.url}
                                   className={clsx(
-                                    "block rounded-md px-3 py-2 transition-colors",
+                                    "flex items-center justify-between rounded-md px-3 py-2 transition-colors",
                                     isSubActive &&
                                       "bg-gray-200 dark:bg-gray-700",
                                   )}
                                 >
-                                  <span>{subItem.title}</span>
+                                  <span className="flex items-center">
+                                    <span>{subItem.title}</span>
+                                    {subItem.badge ? (
+                                      <NewBadge>{subItem.badge}</NewBadge>
+                                    ) : undefined}
+                                  </span>
                                 </a>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
