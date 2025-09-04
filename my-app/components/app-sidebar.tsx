@@ -40,6 +40,7 @@ const data = {
       items: [
         { title: "Upcoming Pubs", url: "/dashboard" },
         { title: "Past Pubs", url: "/dashboard/history" },
+        { title: "Visitor Statistics", url: "/dashboard/statistics" },
       ],
     },
     {
