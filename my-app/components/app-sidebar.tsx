@@ -60,7 +60,8 @@ const data = {
       title: "Settings",
       url: "/settings/reset-password",
       icon: Settings2,
-      items: [{ title: "Reset Password", url: "/settings/reset-password" }],
+      badge: "New",
+      items: [{ title: "Reset Password", url: "/settings/reset-password" }, { title: "Users", url: "/org-admin", badge: "New" }],
     },
   ],
 };
@@ -127,7 +128,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: "Admin",
         url: "/super-admin",
         icon: Activity,
-        items: [{ title: "Monitoring", url: "/super-admin" }],
+        items: [{ title: "Monitoring", url: "/super-admin" }, { title: "Control Panel", url: "/super-admin-dashboard" }],
       },
       ...data.navMain,
     ];

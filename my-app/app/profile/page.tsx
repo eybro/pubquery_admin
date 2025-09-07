@@ -8,12 +8,18 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Separator } from "@/components/ui/separator";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
 import { Textarea } from "@/components/ui/textarea";
+import Image from "next/image";
+import Link from "next/link";
 
 type Profile = {
   organizationName: string;
@@ -26,6 +32,8 @@ type Profile = {
   cider_price?: number;
   drink_price?: number;
   logo_url?: string | null;
+  email: string | null;
+  description?: string | null;
 };
 
 export default function Page() {
@@ -33,18 +41,17 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [error] = useState("");
   const [saving, setSaving] = useState(false);
+
   const [displayName, setDisplayName] = useState("");
   const [beerPrice, setBeerPrice] = useState<number | "">("");
   const [ciderPrice, setCiderPrice] = useState<number | "">("");
   const [drinkPrice, setDrinkPrice] = useState<number | "">("");
   const [logoUrl, setLogoUrl] = useState<string | undefined>();
   const [logoUploading, setLogoUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [description, setDescription] = useState("");
-  const [message, setMessage] = useState<{
-    text: string;
-    type: "success" | "error";
-  }>();
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [message, setMessage] = useState<{ text: string; type: "success" | "error" }>();
 
   const showMessage = (text: string, type: "success" | "error") => {
     setMessage({ text, type });
@@ -56,7 +63,7 @@ export default function Page() {
       try {
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`,
-          { credentials: "include" },
+          { credentials: "include" }
         );
         if (!response.ok) throw new Error("Failed to fetch profile");
 
@@ -87,14 +94,12 @@ export default function Page() {
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({ display_name: displayName }),
-        },
+        }
       );
       if (!response.ok) throw new Error("Failed to update display name");
 
       const updated = await response.json();
-      setProfile((prev) =>
-        prev ? { ...prev, display_name: updated.display_name } : prev,
-      );
+      setProfile((prev) => (prev ? { ...prev, display_name: updated.display_name } : prev));
       showMessage("Display name updated", "success");
     } catch {
       showMessage("Display name could not be updated", "error");
@@ -117,7 +122,7 @@ export default function Page() {
             cider_price: ciderPrice === "" ? undefined : Number(ciderPrice),
             drink_price: drinkPrice === "" ? undefined : Number(drinkPrice),
           }),
-        },
+        }
       );
       if (!response.ok) throw new Error("Failed to update prices");
       showMessage("Prices updated", "success");
@@ -138,11 +143,9 @@ export default function Page() {
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({ description }),
-        },
+        }
       );
-
       if (!response.ok) throw new Error("Failed to update description");
-
       showMessage("Description updated", "success");
     } catch {
       showMessage("Description could not be updated", "error");
@@ -160,7 +163,7 @@ export default function Page() {
 
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/api/organizations/updateLogo`,
-      { method: "POST", credentials: "include", body: formData },
+      { method: "POST", credentials: "include", body: formData }
     );
     if (response.ok) {
       const { logo_url } = await response.json();
@@ -171,6 +174,58 @@ export default function Page() {
     }
     setLogoUploading(false);
   };
+
+const ReadOnlyField = ({
+  label,
+  value,
+  href,
+}: { label: string; value?: string | null; href?: string }) => (
+  <div className="space-y-1.5">
+    <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      {label}
+    </div>
+    <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm text-foreground">
+      {value ? (
+        href ? (
+          <Link href={href} target="_blank" className="underline underline-offset-2 hover:opacity-90">
+            {value}
+          </Link>
+        ) : (
+          value
+        )
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )}
+    </div>
+  </div>
+);
+
+  const PriceField = ({
+    label,
+    value,
+    onChange,
+  }: {
+    label: string;
+    value: number | "";
+    onChange: (v: number | "") => void;
+  }) => (
+    <div>
+      <span className="mb-1 block text-xs text-muted-foreground">{label}</span>
+      <div className="relative">
+        <Input
+          type="number"
+          value={value}
+          onChange={(e) => onChange(e.target.value === "" ? "" : Number.parseInt(e.target.value))}
+          min={0}
+          className="w-full pr-12"
+          inputMode="numeric"
+        />
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+          kr
+        </span>
+      </div>
+    </div>
+  );
 
   return (
     <SidebarProvider>
@@ -191,19 +246,19 @@ export default function Page() {
         <header className="flex h-14 items-center gap-2 border-b bg-background/60 backdrop-blur-sm sm:h-16">
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
-            <Separator
-              orientation="vertical"
-              className="mr-2 hidden h-4 sm:block"
-            />
+            <Separator orientation="vertical" className="mr-2 hidden h-4 sm:block" />
             <h1 className="text-base font-semibold sm:text-xl">Profile info</h1>
           </div>
         </header>
 
-        {/* Page wrapper: tighter on mobile, centered content */}
         <div className="w-full px-4 py-6 sm:px-6 md:p-10">
           <main className="mx-auto w-full max-w-[46rem] md:max-w-3xl">
-            <Card className="rounded-2xl shadow-lg">
-              <CardContent className="space-y-6 p-4 sm:p-6 md:p-8">
+            <Card className="rounded-2xl border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xl">Organization</CardTitle>
+              </CardHeader>
+
+              <CardContent className="space-y-8">
                 {loading ? (
                   <div className="space-y-4">
                     <Skeleton className="h-6 w-3/4 sm:w-1/2" />
@@ -211,42 +266,30 @@ export default function Page() {
                     <Skeleton className="h-6 w-2/3 sm:w-1/3" />
                   </div>
                 ) : (profile ? (
-                  <div className="space-y-6">
-                    {/* Info grid */}
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      <p className="break-words">
-                        <strong>Organization:</strong>{" "}
-                        {profile.organizationName}
-                      </p>
-                      <p className="break-words">
-                        <strong>Venue:</strong> {profile.venueName}
-                      </p>
-                      <p className="break-words">
-                        <strong>Username:</strong> {profile.username}
-                      </p>
-                      <p className="break-words">
-                        <strong>Facebook page:</strong>{" "}
-                        {profile.fb_page ? (
-                          <a
-                            href={`https://facebook.com/${profile.fb_page}`}
-                            className="text-blue-600 underline underline-offset-2 hover:opacity-80"
-                          >
-                            {profile.fb_page}
-                          </a>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </p>
-                    </div>
+                  <>
+                    {/* ── Organization Info (read-only) ───────────────────── */}
+                    <section className="space-y-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <ReadOnlyField label= "Parent organization" value={profile.organizationName} />
+                        <ReadOnlyField label="Default venue" value={profile.venueName} />
+                        <ReadOnlyField
+                          label="Facebook page"
+                          value={profile.fb_page || undefined}
+                          href={
+                            profile.fb_page
+                              ? `https://facebook.com/${profile.fb_page}`
+                              : undefined
+                          }
+                        />
+                      </div>
+                    </section>
 
                     <Separator />
 
-                    {/* Logo upload: stack on mobile */}
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">
-                        Organization Logo
-                      </label>
-                      <div className="mb-2 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    {/* ── Logo ────────────────────────────────────────────── */}
+                    <section className="space-y-3">
+                      <div className="text-sm font-medium text-foreground">Organization logo</div>
+                      <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-4">
                           {logoUrl ? (
                             <Image
@@ -275,20 +318,18 @@ export default function Page() {
                           disabled={logoUploading}
                           className="w-full sm:w-auto"
                         >
-                          {logoUploading
-                            ? "Uploading..."
-                            : "Upload/Change Logo"}
+                          {logoUploading ? "Uploading..." : "Upload/Change Logo"}
                         </Button>
                       </div>
-                    </div>
+                    </section>
 
                     <Separator />
 
-                    {/* Display name: stack on mobile */}
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">
-                        Display Name (shown on pubquery.se)
-                      </label>
+                    {/* ── Display name ────────────────────────────────────── */}
+                    <section className="space-y-3">
+                      <div className="text-sm font-medium text-foreground">
+                        Public display name
+                      </div>
                       <div className="flex flex-col gap-2 sm:flex-row">
                         <Input
                           value={displayName}
@@ -304,14 +345,13 @@ export default function Page() {
                           {saving ? "Saving..." : "Update"}
                         </Button>
                       </div>
-                    </div>
+                    </section>
 
                     <Separator />
 
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">
-                        Description
-                      </label>
+                    {/* ── Description ─────────────────────────────────────── */}
+                    <section className="space-y-3">
+                      <div className="text-sm font-medium text-foreground">Description</div>
                       <div className="flex flex-col gap-2 sm:flex-row">
                         <Textarea
                           value={description}
@@ -328,81 +368,19 @@ export default function Page() {
                           {saving ? "Saving..." : "Update"}
                         </Button>
                       </div>
-                    </div>
+                    </section>
 
-                    {/* Prices: single column on mobile, 3-up on sm+; button full-width on mobile */}
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">
-                        Drink Prices (kr)
-                      </label>
+                    <Separator />
 
+                    {/* ── Prices ──────────────────────────────────────────── */}
+                    <section className="space-y-3">
+                      <div className="text-sm font-medium text-foreground">Drink prices</div>
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 sm:pr-4">
-                          <div>
-                            <span className="mb-1 block text-xs text-muted-foreground">
-                              Beer
-                            </span>
-                            <Input
-                              type="number"
-                              value={beerPrice}
-                              onChange={(e) =>
-                                setBeerPrice(
-                                  e.target.value === ""
-                                    ? ""
-                                    : Number.parseInt(e.target.value),
-                                )
-                              }
-                              placeholder="kr"
-                              min={0}
-                              className="w-full sm:w-28"
-                              aria-label="Beer Price"
-                              inputMode="numeric"
-                            />
-                          </div>
-                          <div>
-                            <span className="mb-1 block text-xs text-muted-foreground">
-                              Cider
-                            </span>
-                            <Input
-                              type="number"
-                              value={ciderPrice}
-                              onChange={(e) =>
-                                setCiderPrice(
-                                  e.target.value === ""
-                                    ? ""
-                                    : Number.parseInt(e.target.value),
-                                )
-                              }
-                              placeholder="kr"
-                              min={0}
-                              className="w-full sm:w-28"
-                              aria-label="Cider Price"
-                              inputMode="numeric"
-                            />
-                          </div>
-                          <div>
-                            <span className="mb-1 block text-xs text-muted-foreground">
-                              Drink
-                            </span>
-                            <Input
-                              type="number"
-                              value={drinkPrice}
-                              onChange={(e) =>
-                                setDrinkPrice(
-                                  e.target.value === ""
-                                    ? ""
-                                    : Number.parseInt(e.target.value),
-                                )
-                              }
-                              placeholder="kr"
-                              min={0}
-                              className="w-full sm:w-28"
-                              aria-label="Drink Price"
-                              inputMode="numeric"
-                            />
-                          </div>
+                          <PriceField label="Beer" value={beerPrice} onChange={setBeerPrice} />
+                          <PriceField label="Cider" value={ciderPrice} onChange={setCiderPrice} />
+                          <PriceField label="Drink" value={drinkPrice} onChange={setDrinkPrice} />
                         </div>
-
                         <Button
                           onClick={handleSavePrices}
                           disabled={saving}
@@ -411,9 +389,18 @@ export default function Page() {
                           {saving ? "Saving..." : "Update"}
                         </Button>
                       </div>
-                    </div>
+                    </section>
 
                     <Separator />
+
+                    {/* ── Account info (read-only) ───────────────────────── */}
+                    <section className="space-y-4">
+                      <div className="text-sm font-medium text-foreground">Account</div>
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <ReadOnlyField label="Username" value={profile.username} />
+                        <ReadOnlyField label="Email" value={profile.email || undefined} />
+                      </div>
+                    </section>
 
                     <p className="text-sm text-muted-foreground">
                       Please contact{" "}
@@ -425,7 +412,7 @@ export default function Page() {
                       </a>{" "}
                       if any info is incorrect.
                     </p>
-                  </div>
+                  </>
                 ) : (
                   <p className="text-red-500">Failed to load profile info.</p>
                 ))}
