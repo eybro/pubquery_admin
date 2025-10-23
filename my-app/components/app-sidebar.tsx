@@ -7,7 +7,7 @@ import {
   User,
   PartyPopper,
   CircleUserRound,
-  Activity, // ⬅️ add this
+  Activity,
 } from "lucide-react";
 
 import { LogOut } from "lucide-react";
@@ -39,8 +39,8 @@ const data = {
       isActive: true,
       items: [
         { title: "Upcoming Pubs", url: "/dashboard" },
-        { title: "Past Pubs", url: "/dashboard/history", badge: "New" },           
-        { title: "Visitor Statistics", url: "/dashboard/statistics", badge: "New" } 
+        { title: "Past Pubs", url: "/dashboard/history" },
+        { title: "Visitor Statistics", url: "/dashboard/statistics" }
       ],
     },
     {
@@ -53,18 +53,16 @@ const data = {
       title: "Profile",
       url: "/profile",
       icon: CircleUserRound,
-      badge: "New", 
-      items: [{ title: "Profile info", url: "/profile", badge: "New" }],
+      items: [{ title: "Profile info", url: "/profile" }],
     },
     {
       title: "Settings",
       url: "/settings/reset-password",
       icon: Settings2,
-      badge: "New",
-      items: [{ title: "Reset Password", url: "/settings/reset-password" }, { title: "Users", url: "/org-admin", badge: "New" }],
+      items: [{ title: "Reset Password", url: "/settings/reset-password" }, { title: "Users", url: "/org-admin"}, { title: "User guide", url: "https://pubquery-images.fra1.cdn.digitaloceanspaces.com/User-guide/Pubquery%20user%20guide.pdf"}],
     },
   ],
-};
+  };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [user, setUser] = React.useState<

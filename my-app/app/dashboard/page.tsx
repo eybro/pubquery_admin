@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { CalendarIcon, PlusIcon, Trash2, Pencil, Save, X } from "lucide-react";
+import { GuideBannerController } from "@/components/guide-banner-controller";
 import { toZonedTime } from "date-fns-tz";
 import {
   Select,
@@ -819,6 +820,8 @@ export default function Page() {
             <h1 className="text-xl font-semibold">Add & Edit Pubs</h1>
           </div>
         </header>
+
+        <GuideBannerController />
 
         {isLoading && (
           <div className="fixed right-4 top-4 rounded-lg bg-blue-600 px-4 py-2 text-white shadow-lg">
