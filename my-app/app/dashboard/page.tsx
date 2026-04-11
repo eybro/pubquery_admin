@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CalendarIcon, PlusIcon, Trash2, Pencil, Save, X } from "lucide-react";
 import { GuideBannerController } from "@/components/guide-banner-controller";
 import { toZonedTime } from "date-fns-tz";
@@ -100,6 +101,11 @@ type Organization = {
   name: string;
   display_name?: string | undefined;
 };
+type PatchOption = {
+  id: number;
+  name: string;
+  organization_id: number;
+};
 
 function formatURL(url?: string | undefined): string {
   if (!url || typeof url !== "string") return "";
@@ -177,20 +183,26 @@ function PubCardItem({
   updatePub,
   venues,
   orgs,
+  availablePatches,
   showMessage,
-  myOrgId
+  myOrgId,
 }: {
   pub: Pub;
   canEdit?: boolean;
   venues: Venue[];
   orgs: Organization[];
+  availablePatches: PatchOption[];
   deletePub: (id: number) => void;
-  updatePub: (pub: Pub) => void;
+  updatePub: (pub: Pub) => Promise<boolean>;
   showMessage: (text: string, type: "success" | "error") => void;
   myOrgId: number | undefined;
 }) {
   const [editable, setEditable] = useState(false);
   const [editedPub, setEditedPub] = useState<Pub>(pub);
+  const [linkedPatchIds, setLinkedPatchIds] = useState<number[]>([]);
+  const [initialLinkedPatchIds, setInitialLinkedPatchIds] = useState<number[]>([]);
+  const [loadingLinkedPatches, setLoadingLinkedPatches] = useState(false);
+  const [savingPatchLinks, setSavingPatchLinks] = useState(false);
 
   const venueName = venues.find(
     (v) => v.id === (editable ? editedPub.venue_id : pub.venue_id),
@@ -217,6 +229,43 @@ function PubCardItem({
       : undefined;
 
   const isEditable = canEdit && editable;
+
+  useEffect(() => {
+    if (!isEditable || !editedPub.patches) {
+      setLinkedPatchIds([]);
+      setInitialLinkedPatchIds([]);
+      return;
+    }
+
+    let active = true;
+    (async () => {
+      try {
+        setLoadingLinkedPatches(true);
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/patches/event/${pub.id}`,
+          { credentials: "include" },
+        );
+        if (!response.ok) throw new Error("Failed to load linked patches for this event");
+        const rows: { id: number }[] = await response.json();
+        if (!active) return;
+        const ids = rows.map((row) => row.id);
+        setLinkedPatchIds(ids);
+        setInitialLinkedPatchIds(ids);
+      } catch (error) {
+        if (active) {
+          setLinkedPatchIds([]);
+          setInitialLinkedPatchIds([]);
+          showMessage(error instanceof Error ? error.message : "Failed to load event patch links", "error");
+        }
+      } finally {
+        if (active) setLoadingLinkedPatches(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [isEditable, editedPub.patches, pub.id, showMessage]);
 
   const handleChange = <K extends keyof Pub>(field: K, value: Pub[K]) => {
     if (field === "date") {
@@ -245,14 +294,63 @@ function PubCardItem({
   handleChange(field, numeric as Pub["co_host_organization_id"]);
 };
 
-  const handleSave = () => {
-    updatePub(editedPub);
-    setEditable(false);
+  const syncPatchLinks = async (targetPatchIds: number[], currentPatchIds: number[]) => {
+    const toLink = targetPatchIds.filter((patchId) => !currentPatchIds.includes(patchId));
+    const toUnlink = currentPatchIds.filter((patchId) => !targetPatchIds.includes(patchId));
+
+    setSavingPatchLinks(true);
+    try {
+      await Promise.all([
+        ...toLink.map((patchId) =>
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/patches/link-to-event`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ patchId, eventId: pub.id }),
+          }),
+        ),
+        ...toUnlink.map((patchId) =>
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/patches/unlink-from-event`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ patchId, eventId: pub.id }),
+          }),
+        ),
+      ]);
+    } finally {
+      setSavingPatchLinks(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      const updated = await updatePub(editedPub);
+      if (!updated) return;
+
+      if (editedPub.patches) {
+        await syncPatchLinks(linkedPatchIds, initialLinkedPatchIds);
+      } else if (initialLinkedPatchIds.length > 0) {
+        await syncPatchLinks([], initialLinkedPatchIds);
+      }
+
+      setEditable(false);
+    } catch {
+      showMessage("Failed to save event changes", "error");
+    }
   };
 
   const handleCancel = () => {
     setEditedPub(pub);
+    setLinkedPatchIds(initialLinkedPatchIds);
     setEditable(false);
+  };
+
+  const togglePatchForEvent = (patchId: number, checked: boolean) => {
+    setLinkedPatchIds((prev) => {
+      if (checked) return prev.includes(patchId) ? prev : [...prev, patchId];
+      return prev.filter((id) => id !== patchId);
+    });
   };
 
   const fbLink = formatURL(
@@ -473,6 +571,44 @@ function PubCardItem({
             </div>
           </div>
 
+          {isEditable && editedPub.patches && (
+            <div className="sm:col-span-12">
+              <Label>Patches sold at this event</Label>
+              <div className="mt-2 rounded-md border border-input bg-white p-3">
+                {loadingLinkedPatches && (
+                  <p className="text-sm text-muted-foreground">Loading linked patches…</p>
+                )}
+                {!loadingLinkedPatches && availablePatches.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No patches available for your organization.</p>
+                )}
+                {!loadingLinkedPatches && availablePatches.length > 0 && (
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {availablePatches.map((patch) => {
+                      const checked = linkedPatchIds.includes(patch.id);
+                      return (
+                        <label
+                          key={`event-${pub.id}-patch-${patch.id}`}
+                          className="flex items-center gap-2 rounded-md border p-2 text-sm"
+                          htmlFor={`event-${pub.id}-patch-${patch.id}`}
+                        >
+                          <Checkbox
+                            id={`event-${pub.id}-patch-${patch.id}`}
+                            checked={checked}
+                            onCheckedChange={(value) => togglePatchForEvent(patch.id, value === true)}
+                          />
+                          <span>{patch.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+                {savingPatchLinks && (
+                  <p className="mt-2 text-xs text-muted-foreground">Saving patch links…</p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Event Link (edit only; view uses the facebook button in header) */}
           {isEditable && (
             <div className="sm:col-span-12">
@@ -526,6 +662,7 @@ export default function Page() {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [cohostOrgId, setCohostOrgId] = useState<string>("none");
   const [orgs, setOrgs] = useState<Organization[]>([]);
+  const [orgPatches, setOrgPatches] = useState<PatchOption[]>([]);
   const [myOrgId, setMyOrgId] = useState<number | undefined>();
   const [message, setMessage] = useState<{
     text: string;
@@ -651,6 +788,21 @@ export default function Page() {
     }
     fetchOrganizations();
 
+    async function fetchOrgPatches() {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/patches/org`,
+          { credentials: "include" },
+        );
+        if (!response.ok) throw new Error("Failed to fetch patches");
+        const data: PatchOption[] = await response.json();
+        setOrgPatches(data);
+      } catch {
+        showMessage("Failed to load patch list for event linking", "error");
+      }
+    }
+    fetchOrgPatches();
+
     const fetchDefaultVenue = async () => {
       try {
         const response = await fetch(
@@ -749,15 +901,15 @@ export default function Page() {
     }
   };
 
-  const updatePub = async (pub: Pub) => {
+  const updatePub = async (pub: Pub): Promise<boolean> => {
     const localDate = toZonedTime(pub.date, "Europe/Stockholm");
     const formattedDate = format(localDate, "yyyy-MM-dd'T'HH:mm:ssXXX");
     const formatted_event_link = formatURL(pub.fb_link);
 
     if (myOrgId !== null && pub.co_host_organization_id === myOrgId) {
-  showMessage("You can’t select your own organization as co-host.", "error");
-  return;
-}
+      showMessage("You can’t select your own organization as co-host.", "error");
+      return false;
+    }
 
     try {
       const response = await fetch(
@@ -792,10 +944,12 @@ export default function Page() {
         ),
       );
       showMessage("pub updated successfully!", "success");
+      return true;
     } catch (error: unknown) {
       if (error instanceof Error)
         setMessage({ text: error.message, type: "error" });
       else setMessage({ text: "An unknown error occurred", type: "error" });
+      return false;
     }
   };
 
@@ -985,6 +1139,7 @@ export default function Page() {
                   showMessage={showMessage}
                   venues={venues}
                   orgs={orgs}
+                  availablePatches={orgPatches}
                   myOrgId={myOrgId}
                 />
               ))
@@ -1005,6 +1160,7 @@ export default function Page() {
                     showMessage={showMessage}
                     venues={venues}
                     orgs={orgs}
+                    availablePatches={orgPatches}
                     myOrgId={myOrgId}
                   />
                 ))}

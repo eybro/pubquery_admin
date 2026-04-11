@@ -5,6 +5,8 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CalendarIcon, PlusIcon } from "lucide-react";
 import { toZonedTime } from "date-fns-tz";
 import { Textarea } from "@/components/ui/textarea";
@@ -94,11 +96,19 @@ type Dinner = {
   price_without_alcohol: number;
   price_with_alcohol: number;
   signup_date: string;
+  has_patches?: boolean | number;
+  patches?: boolean;
 };
 
 type Venue = {
   id: number;
   name: string;
+};
+
+type PatchOption = {
+  id: number;
+  name: string;
+  organization_id: number;
 };
 
 function DinnerAccordionItem({
@@ -108,16 +118,24 @@ function DinnerAccordionItem({
   updateDinner,
   formatDate,
   showMessage,
+  availablePatches,
 }: {
   dinner: Dinner;
   venues: Venue[];
   deleteDinner: (id: number) => void;
-  updateDinner: (dinner: Dinner) => void;
+  updateDinner: (dinner: Dinner) => Promise<boolean>;
   formatDate: (date: string) => string;
   showMessage: (text: string, type: "success" | "error") => void;
+  availablePatches: PatchOption[];
 }) {
   const [editable, setEditable] = useState(false);
   const [editedDinner, setEditedDinner] = useState<Dinner>(dinner);
+  const [linkedPatchIds, setLinkedPatchIds] = useState<number[]>([]);
+  const [initialLinkedPatchIds, setInitialLinkedPatchIds] = useState<number[]>([]);
+  const [loadingLinkedPatches, setLoadingLinkedPatches] = useState(false);
+  const [savingPatchLinks, setSavingPatchLinks] = useState(false);
+
+  const isEditable = editable;
 
   const handleChange = (field: keyof Dinner, value: string | number) => {
     if (field === "date") {
@@ -131,9 +149,99 @@ function DinnerAccordionItem({
     setEditedDinner((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
-    updateDinner(editedDinner);
+  useEffect(() => {
+    setEditedDinner(dinner);
+  }, [dinner]);
+
+  useEffect(() => {
+    if (!isEditable || !editedDinner.patches) {
+      setLinkedPatchIds([]);
+      setInitialLinkedPatchIds([]);
+      return;
+    }
+
+    let active = true;
+    (async () => {
+      try {
+        setLoadingLinkedPatches(true);
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/patches/dinner/${dinner.id}`,
+          { credentials: "include" },
+        );
+        if (!response.ok) throw new Error("Failed to load linked patches for this dinner");
+        const rows: { id: number }[] = await response.json();
+        if (!active) return;
+        const ids = rows.map((row) => row.id);
+        setLinkedPatchIds(ids);
+        setInitialLinkedPatchIds(ids);
+      } catch (error) {
+        if (!active) return;
+        setLinkedPatchIds([]);
+        setInitialLinkedPatchIds([]);
+        showMessage(
+          error instanceof Error ? error.message : "Failed to load dinner patch links",
+          "error",
+        );
+      } finally {
+        if (active) setLoadingLinkedPatches(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [isEditable, editedDinner.patches, dinner.id, showMessage]);
+
+  const syncDinnerPatchLinks = async (
+    targetPatchIds: number[],
+    currentPatchIds: number[],
+  ) => {
+    const toLink = targetPatchIds.filter((patchId) => !currentPatchIds.includes(patchId));
+    const toUnlink = currentPatchIds.filter((patchId) => !targetPatchIds.includes(patchId));
+
+    setSavingPatchLinks(true);
+    try {
+      await Promise.all([
+        ...toLink.map((patchId) =>
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/patches/link-to-dinner`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ patchId, dinnerId: dinner.id }),
+          }),
+        ),
+        ...toUnlink.map((patchId) =>
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/patches/unlink-from-dinner`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ patchId, dinnerId: dinner.id }),
+          }),
+        ),
+      ]);
+    } finally {
+      setSavingPatchLinks(false);
+    }
+  };
+
+  const handleSave = async () => {
+    const updated = await updateDinner(editedDinner);
+    if (!updated) return;
+
+    if (editedDinner.patches) {
+      await syncDinnerPatchLinks(linkedPatchIds, initialLinkedPatchIds);
+    } else if (initialLinkedPatchIds.length > 0) {
+      await syncDinnerPatchLinks([], initialLinkedPatchIds);
+    }
+
     setEditable(false);
+  };
+
+  const togglePatchForDinner = (patchId: number, checked: boolean) => {
+    setLinkedPatchIds((prev) => {
+      if (checked) return prev.includes(patchId) ? prev : [...prev, patchId];
+      return prev.filter((id) => id !== patchId);
+    });
   };
 
   return (
@@ -258,6 +366,63 @@ function DinnerAccordionItem({
         </div>
 
         <div className="flex flex-col gap-1">
+          <Label htmlFor={`sellPatches-${dinner.id}`}>Patches offerd?</Label>
+          <div className="flex h-10 items-center gap-2 rounded-md border border-input bg-white px-3">
+            <Switch
+              id={`sellPatches-${dinner.id}`}
+              checked={Boolean(editedDinner.patches)}
+              disabled={!editable}
+              onCheckedChange={(checked) => handleChange("patches", checked ? 1 : 0)}
+            />
+            {!editable && (
+              <span className="text-sm">{editedDinner.patches ? "Ja" : "Nej"}</span>
+            )}
+          </div>
+        </div>
+
+        {editable && editedDinner.patches && (
+          <div className="flex flex-col gap-1 sm:col-span-2">
+            <Label>Patches linked to the dinner</Label>
+            <div className="rounded-md border border-input bg-white p-3">
+              {loadingLinkedPatches && (
+                <p className="text-sm text-muted-foreground">Loading linked patches…</p>
+              )}
+              {!loadingLinkedPatches && availablePatches.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  No patches available for your organization.
+                </p>
+              )}
+              {!loadingLinkedPatches && availablePatches.length > 0 && (
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {availablePatches.map((patch) => {
+                    const checked = linkedPatchIds.includes(patch.id);
+                    return (
+                      <label
+                        key={`dinner-${dinner.id}-patch-${patch.id}`}
+                        htmlFor={`dinner-${dinner.id}-patch-${patch.id}`}
+                        className="flex items-center gap-2 rounded-md border p-2 text-sm"
+                      >
+                        <Checkbox
+                          id={`dinner-${dinner.id}-patch-${patch.id}`}
+                          checked={checked}
+                          onCheckedChange={(value) =>
+                            togglePatchForDinner(patch.id, value === true)
+                          }
+                        />
+                        <span>{patch.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+              {savingPatchLinks && (
+                <p className="mt-2 text-xs text-muted-foreground">Saving patch links…</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-1">
           <Label>Allowed Guests</Label>
           <Select
             value={editedDinner.allowed_guests}
@@ -372,6 +537,9 @@ export default function Page() {
   const [priceWithoutAlcohol, setPriceWithoutAlcohol] = useState("");
   const [priceWithAlcohol, setPriceWithAlcohol] = useState("");
   const [signupDate, setSignupDate] = useState<Date | undefined>();
+  const [sellPatches, setSellPatches] = useState(false);
+  const [orgPatches, setOrgPatches] = useState<PatchOption[]>([]);
+  const [newDinnerPatchIds, setNewDinnerPatchIds] = useState<number[]>([]);
 
   const [message, setMessage] = useState<{
     text: string;
@@ -455,7 +623,11 @@ export default function Page() {
         if (!response.ok) throw new Error("Failed to fetch dinners");
 
         const data = await response.json();
-        setDinners(data);
+        const normalized = (data as Dinner[]).map((dinner) => ({
+          ...dinner,
+          patches: Boolean(dinner.patches) || Boolean(dinner.has_patches),
+        }));
+        setDinners(normalized);
       } catch (error: unknown) {
         if (error instanceof Error) {
           setMessage({ text: error.message, type: "error" });
@@ -484,6 +656,23 @@ export default function Page() {
     fetchVenues();
   }, []);
   useEffect(() => {
+    async function fetchOrgPatches() {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/patches/org`,
+          { credentials: "include" },
+        );
+        if (!response.ok) throw new Error("Failed to fetch patches");
+        const data: PatchOption[] = await response.json();
+        setOrgPatches(data);
+      } catch {
+        showMessage("Failed to load patch list for dinner linking", "error");
+      }
+    }
+    fetchOrgPatches();
+  }, []);
+
+  useEffect(() => {
     const fetchDefaultVenue = async () => {
       try {
         const response = await fetch(
@@ -509,6 +698,13 @@ export default function Page() {
   }, []);
 
   // Add Dinner
+  const toggleNewDinnerPatch = (patchId: number, checked: boolean) => {
+    setNewDinnerPatchIds((prev) => {
+      if (checked) return prev.includes(patchId) ? prev : [...prev, patchId];
+      return prev.filter((id) => id !== patchId);
+    });
+  };
+
   const addDinner = async () => {
     if (!eventTitle || !date || !allowedGuests) {
       showMessage(
@@ -563,8 +759,28 @@ export default function Page() {
       }
 
       const newDinner = await response.json();
-      setDinners([...dinners, newDinner.dinner]);
+      const createdDinner: Dinner = {
+        ...newDinner.dinner,
+        patches: sellPatches,
+      };
+
+      if (sellPatches && newDinnerPatchIds.length > 0) {
+        await Promise.all(
+          newDinnerPatchIds.map((patchId) =>
+            fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/patches/link-to-dinner`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ patchId, dinnerId: newDinner.dinner.id }),
+            }),
+          ),
+        );
+      }
+
+      setDinners([...dinners, createdDinner]);
       showMessage("Dinner added successfully!", "success");
+      setSellPatches(false);
+      setNewDinnerPatchIds([]);
     } catch (error: unknown) {
       if (error instanceof Error) {
         setMessage({ text: error.message, type: "error" });
@@ -599,7 +815,7 @@ export default function Page() {
     }
   };
 
-  const updateDinner = async (dinner: Dinner) => {
+  const updateDinner = async (dinner: Dinner): Promise<boolean> => {
     const localDate = toZonedTime(dinner.date, "Europe/Stockholm");
     const formattedDate = format(localDate, "yyyy-MM-dd'T'HH:mm:ssXXX");
 
@@ -640,19 +856,26 @@ export default function Page() {
 
       const updatedDinner = await response.json();
 
+      const normalizedDinner: Dinner = {
+        ...updatedDinner.dinner,
+        patches: Boolean(dinner.patches),
+      };
+
       setDinners((prevDinners) =>
         prevDinners.map((d) =>
-          d.id === updatedDinner.dinner.id ? updatedDinner.dinner : d,
+          d.id === updatedDinner.dinner.id ? normalizedDinner : d,
         ),
       );
 
       showMessage("Dinner updated successfully!", "success");
+      return true;
     } catch (error: unknown) {
       if (error instanceof Error) {
         setMessage({ text: error.message, type: "error" });
       } else {
         setMessage({ text: "An unknown error occurred", type: "error" });
       }
+      return false;
     }
   };
 
@@ -792,6 +1015,49 @@ export default function Page() {
               </SelectContent>
             </Select>
 
+            <div className="flex h-10 w-full items-center gap-2 rounded-md border border-input bg-white px-3 sm:w-[48%]">
+              <Label htmlFor="sellDinnerPatches" className="text-sm text-muted-foreground">
+                Patches offered?
+              </Label>
+              <Switch
+                id="sellDinnerPatches"
+                checked={sellPatches}
+                onCheckedChange={setSellPatches}
+              />
+            </div>
+
+            {sellPatches && (
+              <div className="w-full rounded-md border border-input bg-white p-3">
+                {orgPatches.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No patches available for your organization.
+                  </p>
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {orgPatches.map((patch) => {
+                      const checked = newDinnerPatchIds.includes(patch.id);
+                      return (
+                        <label
+                          key={`new-dinner-patch-${patch.id}`}
+                          htmlFor={`new-dinner-patch-${patch.id}`}
+                          className="flex items-center gap-2 rounded-md border p-2 text-sm"
+                        >
+                          <Checkbox
+                            id={`new-dinner-patch-${patch.id}`}
+                            checked={checked}
+                            onCheckedChange={(value) =>
+                              toggleNewDinnerPatch(patch.id, value === true)
+                            }
+                          />
+                          <span>{patch.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Allowed Guests Dropdown */}
             <Select value={allowedGuests} onValueChange={setAllowedGuests}>
               <SelectTrigger className="w-full bg-white sm:w-[48%]">
@@ -853,6 +1119,7 @@ export default function Page() {
                     formatDate={formatDate}
                     showMessage={showMessage}
                     venues={venues}
+                    availablePatches={orgPatches}
                   />
                 ))}
               </Accordion>

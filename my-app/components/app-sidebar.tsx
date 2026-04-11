@@ -8,6 +8,7 @@ import {
   PartyPopper,
   CircleUserRound,
   Activity,
+  Award,
 } from "lucide-react";
 
 import { LogOut } from "lucide-react";
@@ -48,6 +49,12 @@ const data = {
       url: "/dinners",
       icon: PartyPopper,
       items: [{ title: "Upcoming Dinners", url: "/dinners" }],
+    },
+    {
+      title: "Patches",
+      url: "/dashboard/patches",
+      icon: Award,
+      items: [{ title: "Manage Patches", url: "/dashboard/patches" }],
     },
     {
       title: "Profile",
