@@ -61,6 +61,8 @@ type VenueRow = {
   location: string | undefined ;
   address: string | undefined ;
   maps_link: string | undefined ;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 type OrgRow = {
@@ -482,6 +484,67 @@ const upsertVenue = async (payload: Partial<VenueRow> & { id?: number }) => {
     const [location, setLocation] = useState(initial?.location ?? "");
     const [address, setAddress] = useState(initial?.address ?? "");
     const [maps_link, setMapsLink] = useState(initial?.maps_link ?? "");
+    const [latitude, setLatitude] = useState(
+      initial?.latitude === null || initial?.latitude === undefined ? "" : String(initial.latitude)
+    );
+    const [longitude, setLongitude] = useState(
+      initial?.longitude === null || initial?.longitude === undefined ? "" : String(initial.longitude)
+    );
+
+    const parseCoordinate = (
+      value: string,
+      min: number,
+      max: number,
+      label: "Latitude" | "Longitude"
+    ): number | undefined => {
+      const trimmed = value.trim();
+      if (trimmed === "") return undefined;
+
+      const parsed = Number(trimmed);
+      if (!Number.isFinite(parsed)) {
+        setVenueError(`${label} must be a valid number`);
+        return undefined;
+      }
+      if (parsed < min || parsed > max) {
+        setVenueError(`${label} must be between ${min} and ${max}`);
+        return undefined;
+      }
+      return parsed;
+    };
+
+    const handleSubmit = () => {
+      setVenueError(undefined );
+
+      const latitudeIsSet = latitude.trim() !== "";
+      const parsedLatitude = parseCoordinate(latitude, -90, 90, "Latitude");
+      if (latitudeIsSet && parsedLatitude === undefined) return;
+
+      const longitudeIsSet = longitude.trim() !== "";
+      const parsedLongitude = parseCoordinate(longitude, -180, 180, "Longitude");
+      if (longitudeIsSet && parsedLongitude === undefined) return;
+
+      onSubmit({
+        id: initial?.id,
+        name,
+        location,
+        address,
+        maps_link,
+        latitude: latitudeIsSet ? parsedLatitude : undefined,
+        longitude: longitudeIsSet ? parsedLongitude : undefined,
+      });
+    };
+
+    const parsedLatitudePreview = Number(latitude);
+    const parsedLongitudePreview = Number(longitude);
+    const hasValidPreviewCoordinates =
+      latitude.trim() !== "" &&
+      longitude.trim() !== "" &&
+      Number.isFinite(parsedLatitudePreview) &&
+      Number.isFinite(parsedLongitudePreview) &&
+      parsedLatitudePreview >= -90 &&
+      parsedLatitudePreview <= 90 &&
+      parsedLongitudePreview >= -180 &&
+      parsedLongitudePreview <= 180;
 
     return (
       <div className="space-y-4">
@@ -509,8 +572,56 @@ const upsertVenue = async (payload: Partial<VenueRow> & { id?: number }) => {
             <Input id="venue_maps" value={maps_link} onChange={(e) => setMapsLink(e.target.value)} />
           </div>
         </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="venue_latitude">Latitude</Label>
+            <Input
+              id="venue_latitude"
+              value={latitude}
+              placeholder="59.34970000"
+              onChange={(e) => setLatitude(e.target.value)}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">Optional, must be between -90 and 90.</p>
+          </div>
+          <div>
+            <Label htmlFor="venue_longitude">Longitude</Label>
+            <Input
+              id="venue_longitude"
+              value={longitude}
+              placeholder="18.06950000"
+              onChange={(e) => setLongitude(e.target.value)}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">Optional, must be between -180 and 180.</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => window.open("https://www.google.com/maps", "_blank", "noopener,noreferrer")}
+          >
+            Get coordinates from Google Maps
+          </Button>
+          {initial?.latitude !== undefined && initial?.longitude !== undefined && (
+            <p className="text-xs text-muted-foreground">
+              Current: {initial.latitude ?? "—"}, {initial.longitude ?? "—"}
+            </p>
+          )}
+        </div>
+        {hasValidPreviewCoordinates && (
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">Map preview</p>
+            <iframe
+              title="Venue coordinate preview"
+              className="h-56 w-full rounded-md border"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              src={`https://www.google.com/maps?q=${parsedLatitudePreview},${parsedLongitudePreview}&z=15&output=embed`}
+            />
+          </div>
+        )}
         <DialogFooter>
-          <Button onClick={() => onSubmit({ id: initial?.id, name, location, address, maps_link })}>
+          <Button onClick={handleSubmit}>
             {initial?.id ? "Save changes" : "Create venue"}
           </Button>
         </DialogFooter>
