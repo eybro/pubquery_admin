@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
           {
             key: "Content-Security-Policy",
             value:
-              `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://pubquery-images.fra1.digitaloceanspaces.com https://pubquery-images.fra1.cdn.digitaloceanspaces.com; font-src 'self' data:; connect-src 'self' ${apiOrigin}; frame-src https://www.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'`,
+              `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' ${apiOrigin} data: blob: https://pubquery-images.fra1.digitaloceanspaces.com https://pubquery-images.fra1.cdn.digitaloceanspaces.com; font-src 'self' data:; connect-src 'self' ${apiOrigin}; frame-src https://www.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'`,
           },
           {
             key: "X-Content-Type-Options",
