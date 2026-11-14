@@ -40,6 +40,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { SourceBadge } from "@/components/source-badge";
 
 function DateTimePicker({
   date,
@@ -93,6 +94,7 @@ type Dinner = {
   event_link: string;
   venue_id: number;
   allowed_guests: string;
+  auto_created?: boolean | number;
   price_without_alcohol: number;
   price_with_alcohol: number;
   signup_date: string;
@@ -251,8 +253,11 @@ function DinnerAccordionItem({
     >
       <div className="relative flex items-center justify-between p-4">
         {/* Left: Date */}
-        <div className="rounded-lg border border-gray-300 bg-gray-200 px-3 py-1 text-lg font-medium text-primary shadow-sm">
-          {formatDate(dinner.date)}
+        <div className="flex items-center gap-2">
+          <div className="rounded-lg border border-gray-300 bg-gray-200 px-3 py-1 text-lg font-medium text-primary shadow-sm">
+            {formatDate(dinner.date)}
+          </div>
+          <SourceBadge auto_created={dinner.auto_created} />
         </div>
 
         {/* Center: Dinner Title */}
@@ -440,6 +445,7 @@ function DinnerAccordionItem({
               </SelectItem>
               <SelectItem value="kmr">KMR Members</SelectItem>
               <SelectItem value="everyone">Everyone</SelectItem>
+              <SelectItem value="unknown">Unknown</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -625,6 +631,7 @@ export default function Page() {
         const data = await response.json();
         const normalized = (data as Dinner[]).map((dinner) => ({
           ...dinner,
+          auto_created: Boolean(dinner.auto_created),
           patches: Boolean(dinner.patches) || Boolean(dinner.has_patches),
         }));
         setDinners(normalized);
@@ -761,6 +768,7 @@ export default function Page() {
       const newDinner = await response.json();
       const createdDinner: Dinner = {
         ...newDinner.dinner,
+        auto_created: false,
         patches: sellPatches,
       };
 
@@ -845,6 +853,7 @@ export default function Page() {
             event_link: formatted_event_link,
             venue_id: dinner.venue_id,
             allowed_guests: dinner.allowed_guests,
+            auto_created: 0,
             price_without_alcohol: dinner.price_without_alcohol,
             price_with_alcohol: dinner.price_with_alcohol,
             signup_date: formattedSignupDate,
@@ -858,6 +867,7 @@ export default function Page() {
 
       const normalizedDinner: Dinner = {
         ...updatedDinner.dinner,
+        auto_created: false,
         patches: Boolean(dinner.patches),
       };
 
@@ -1071,6 +1081,7 @@ export default function Page() {
                 </SelectItem>
                 <SelectItem value="kmr">KMR Members</SelectItem>
                 <SelectItem value="everyone">Everyone</SelectItem>
+                <SelectItem value="unknown">Unknown</SelectItem>
               </SelectContent>
             </Select>
 

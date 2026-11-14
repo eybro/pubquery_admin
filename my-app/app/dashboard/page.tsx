@@ -926,6 +926,7 @@ export default function Page() {
               formatted_event_link === "" ? undefined : formatted_event_link,
             venue_id: pub.venue_id,
             description: pub.description,
+            auto_created: 0,
             patches: pub.patches,
             co_host_organization_id:
               pub.co_host_organization_id == undefined
@@ -940,7 +941,9 @@ export default function Page() {
       const updatedpub = await response.json();
       setpubs((prevpubs) =>
         prevpubs.map((d) =>
-          d.id === updatedpub.event.id ? updatedpub.event : d,
+          d.id === updatedpub.event.id
+            ? { ...updatedpub.event, auto_created: false }
+            : d,
         ),
       );
       showMessage("pub updated successfully!", "success");
